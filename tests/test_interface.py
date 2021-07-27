@@ -6,7 +6,7 @@ import os
 import h5py
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-fname = os.path.join(dir_path, "..", "tutorials", "tutorial.h5")
+fname = os.path.join(dir_path, "..", "tutorials", "tutorial_v7.h5")
 
 with h5py.File(fname, 'r') as hf:
     nSamples = hf['Drivers'][abcgan.driver_names[0]].shape[0]

@@ -1,7 +1,7 @@
 import unittest
 import os
 from abcgan import persist
-from abcgan import gan
+from abcgan import model
 import abcgan.mean_estimation as me
 import abcgan.constants as const
 import torch
@@ -15,9 +15,9 @@ info_file = os.path.join(dir_path, fname + '.json')
 
 def gen_modules():
     tgen = me.Transformer()
-    gen = gan.Generator(tgen)
+    gen = model.Generator(tgen)
     tcrit = me.Transformer()
-    crit = gan.Critic(tcrit)
+    crit = model.Critic(tcrit)
     return gen, crit
 
 # generate fake inputs
