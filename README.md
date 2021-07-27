@@ -1,12 +1,10 @@
 # About this project
 
-This abcgan project provides the machine learning tools needed for the Atmosense program. Specifically this project will use a generative adversarial network (GAN) that produces both a Generator and a Discriminator to characterize the normal atmospheric background. The project will be in two phases the first phase focusing no low frequency background variables (BVs) and the second focusing on high frequency perturbations (HFPs).
+This project uses a generative adversarial network (GAN) to produce a Generator and a Discriminator to characterize the normal atmospheric background. It provides the ability to sample atmospheric parameters, creating full altitude profiles of the sampled measurements. The current system is trained on over 10 yeras of Inverse Scatter Radar data collected in Alaska at the Poker Flat Radar Range.
 
 ## Purpose / Vision
 
-This project is intended for SRI internal development of the Generator and Discriminator for the Atmosense program only. After development and training versions will be released to GitHub for public consumption and use. We will tag and branch for each release of the generator / discriminator on GitHub. Additionally we will maintain documentation on Gitlab pages, and demonstration scripts for install and use of both the generator and discriminator in the tutorials folder.
-
-The project will characterize the normal atmospheric background in two ways, using a Generator that can generate samples of the background, and a discriminator that can distinguish normal background samples from fake or unusual measurements. The both the generator and the discriminator will input a set of driving parameters describing the external environment (time of day, solar driving, etc.). The generator will output a list of correlated measurements across multiple altitude bins. The discriminator will input both the driving parameters and a list of measurements and output a list of scores, one for each altitude, indicating the agreement of that altitudes measurement with the normally observed background.
+Currently the project support sampling of low frequency measurements conditioned on high altitude drivers (solar flux, solar zenith angle, etc.). The project goal is to augment this initial capability through generation of high frequency distrubances (waves) as well as allowing conditioning on ground based drivers (terrain, etc.).
 
 # Content
 
@@ -15,24 +13,16 @@ The content of this repository entails
 * Readme.md template (this document)
 * source code inside 'src/abcgan'
 * test code inside 'test'
-* documentation
-* python module definition template
-  - setup.py
-  - MANIFEST.in the manifest allows adding non-python module specific components to the delivery (e.g. documentation, changelog, network parameters, etc.)
-* general meta documents
-  - CHANGELOG
-  - LICENSE
-* SRI meta information template (this should not be given to a client)
-* docker configuration (build and docker-compose)
-* .gitignore
+* tutorials inside 'tutorials'
+* pre-trained models inside 'models'
 
 
 ## System requirements
 
 This project requires:
 
-* `Python 3.6` or newer
-* `Pytorch 1.7` or newer
+* `Python 3.8` or newer
+* `Pytorch 1.8` or newer
 
 ## Installation
 
@@ -44,69 +34,39 @@ This section describes installing this project as a python module.
 #### Install Dependencies
 
 Install Pytorch from the [Pytorch page](https://pytorch.org/get-started/locally/)
+Pytorch installation will be specific to your system configuraiton depending on gpu availability and drivers.
+
+#### Install from PyPi
+This method does not currently work but should be working soon.
+```bash
+pip install abcgan
+```
 
 #### Install from source
-This is the preferred method.
+This is currently the the preferred method.
 ```bash
-git clone https://gitlab.sri.com/Atmosense/abcgan.git
+git clone https://github.com/sri-geospace/atmosense-abcgan.git
 ```
 
 ```cmd
-cd abcgan
+cd atmosense-abcgan
 ```
 For end user installation:
 ```cmd
 pip install .
 ```
 
-Alternatively, for development, use symbolic links to support dynamic reloading:
-```cmd
-pip install -e .
-
 ### Run tests
 
-Make sure to have completed the development.
+Make sure to have completed the development. From the top level directory 'atomesense-abcgan' run:
 
 ```bash
-python setup.py test
-coverage run --source="src" -m unittest discover -s tests/
-coverage report
-coverage html
+python -m unittest
 ```
 
-Alternatively you may also run the unit tests with: `python -m unittest discover -s tests`
+# Using the library
 
-# Build Docker image
-
-To build the docker image, you need to have [Docker](https://www.docker.com/) and [Docker-Compose](https://docs.docker.com/compose/install/) installed and run the following command in the project directory:
-
-```bash
-docker build -t pythontemplate .
-```
-
-You may run the application with:
-
-```bash
-docker run pythontemplate
-```
-
-## Docker Compose
-
-Docker compose let's you run multiple images in combination and define some configurations outside the docker image for ease of configuration and use. To start this image via docker-compose use the command:
-
-```bash
-docker-compose up
-```
-
-To shutdown enter:
-
-```bash
-docker-compose down
-```
-
-# Run the application
-
-There is no external application. The code is intended to be used as a library, or in an interactive session. Examples of use are contained in the examples folder (not yet present).
+This is a library that can be imported directly in python and used. For example usage see 'tutorials/demo.py'.
 
 # Contact
 
