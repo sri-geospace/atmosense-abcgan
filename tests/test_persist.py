@@ -8,6 +8,10 @@ import torch
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 dir_path = os.path.join(dir_path, 'data')
+# ensure data directory is present
+if not os.path.exists(dir_path):
+    os.mkdir(dir_path)
+
 fname = 'test'
 param_file = os.path.join(dir_path, fname + '.pt')
 info_file = os.path.join(dir_path, fname + '.json')
