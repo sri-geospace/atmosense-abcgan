@@ -1,3 +1,8 @@
+"""
+Code for masking bad training data points. It replaces NaN values floating point numbers.
+
+"""
+
 import torch
 import numpy as np
 

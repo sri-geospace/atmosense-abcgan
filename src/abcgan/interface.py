@@ -1,7 +1,6 @@
 """
-Code for top level interface.
+Code for top level interface to the saved model.
 
-This code is added to the main package level in __init__.py
 """
 import numpy as np
 from . import constants as const
@@ -168,7 +167,7 @@ def stack_bvs(bv_dict):
     bv_dict: dict
         Dictionary mapping names of background variables
         to numpy arrays with values for those bvs. Each
-        array should have shape n_sapmles x n_altitudes.
+        array should have shape n_samples x n_altitudes.
         Can also use `h5py.Group`.
 
     Valid names for drivers can be found at `abcgan.bv_names`

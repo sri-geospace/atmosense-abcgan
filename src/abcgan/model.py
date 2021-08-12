@@ -1,3 +1,8 @@
+"""
+Code for generating synthetic data sample using driver parameters.
+
+"""
+
 import abcgan.constants as const
 import torch.nn as nn
 import torch

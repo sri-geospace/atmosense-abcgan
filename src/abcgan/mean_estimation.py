@@ -1,3 +1,6 @@
+"""Code containing the transformer and attention model.
+
+"""
 from typing import Optional
 import torch
 import torch.nn as nn
@@ -11,7 +14,7 @@ class Transformer(nn.Module):
     Parameters:
         d_model: the number of expected features in the encoder/decoder inputs
         d_stack: the number of features to stack to output
-        nhead: the number of heads in the multiheadattention models
+        nhead: the number of heads in the multi-head attention models
         num_encoder_layers: the number of sub-encoder-layers in the encoder
         dim_feedforward: the dimension of the feedforward network model
         dropout: the dropout value
@@ -102,8 +105,8 @@ class Transformer(nn.Module):
     def generate_square_subsequent_mask(self, sz: int) -> Tensor:
         """
         Generate a square mask for the sequence. The masked positions are
-        filled with float('-inf').
-        Unmasked positions are filled with float(0.0).
+        filled with :math:float('-inf').
+        Unmasked positions are filled with :math:float(0.0).
         """
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
         mask = mask.float().masked_fill(mask == 0, float('-inf'))
