@@ -1,17 +1,24 @@
-.. Atmosense-ABCGAN documentation master file, created by
-   sphinx-quickstart on Wed Aug 11 17:12:20 2021.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
 
-Welcome to Atmosense-ABCGAN's documentation!
+atmosense-abcgan documentation
 ============================================
+
+
+.. automodule:: abcgan.interface
+    :members:
+.. automodule:: abcgan.mask
+    :members:
+.. automodule:: abcgan.mean_estimation
+    :members:
+.. automodule:: abcgan.model
+    :members:
+.. automodule:: abcgan.persist
+    :members:
+.. automodule:: abcgan.transforms
+    :members:
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-   installation
-   modules
-
 
 
 

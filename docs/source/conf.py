@@ -12,14 +12,14 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../src/abcgan'))
+sys.path.insert(0, os.path.abspath('../../src/abcgan/'))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'Atmosense-ABCGAN'
-copyright = '2021, David Stoker, Sam Austin, Andrew Silberfarb'
-author = 'David Stoker, Sam Austin, Andrew Silberfarb'
+project = 'atmosense-abcgan'
+copyright = '2021, Sam Austin, David Stoker, Andrew Silberfarb'
+author = 'Sam Austin, David Stoker, Andrew Silberfarb'
 
 # The full version, including alpha/beta/rc tags
 release = '0.1'
@@ -30,8 +30,8 @@ release = '0.1'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc'
-]
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.coverage', 'sphinx.ext.napoleon']
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

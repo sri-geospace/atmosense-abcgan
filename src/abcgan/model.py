@@ -13,7 +13,7 @@ class Generator(nn.Module):
     """
     Generator Class
 
-    Parameters
+    Attributes
     -----------
     transformer: torch.nn.Module
         the transformer model object that estimates bv features
@@ -25,6 +25,10 @@ class Generator(nn.Module):
         the dimension of the images, fitted for the dataset used, a scalar
     hidden_dim: int
         the inner dimension, a scalar
+
+    Methods
+    -------
+    forward: computes the forward pass through the generator model.
     """
 
     def __init__(self,
@@ -62,18 +66,23 @@ class Generator(nn.Module):
     def forward(self, driver_src, bv_src, src_key_mask=None, noise=None):
         """
         Function for completing a forward pass of the generator:
-        Given a noise tensor,
-        returns generated images.
+        Given a noise tensor, returns generated images. The model includes an attention mechanism (transformer).
+
         Parameters
         --------------
         driver_src: torch.Tensor
             tensor of driver features from data loader (n_batch, n_dr_feat)
         bv_src: torch.Tensor
-            tensor of bv featrues from data loader (n_batch, n_alt, n_bv_feat)
+            tensor of bv features from data loader (n_batch, n_alt, n_bv_feat)
         src_key_mask: torch.Tensor, optional
             mask for bv features from data loader (n_alt, n_batch)
         noise: torch.Tensor, optional
             a noise tensor with dimensions (n_batch, latent_dim)
+
+        Returns
+        -------
+        fake_output:torch.Tensor
+            tensor of fake data (n_batch, n_alt, n_bv_feat)
         """
         if src_key_mask is None:
             src_key_mask = torch.zeros(
@@ -99,9 +108,9 @@ class Generator(nn.Module):
 
 class Critic(nn.Module):
     """
-    Critic Class
+    Critic Class for estimating the 'realness' of some data. The model includes an attention mechanism (transformer).
 
-    Parameters
+    Attributes
     -------------
     transformer: torch.nn.Module
         transformer for the critic
@@ -113,6 +122,11 @@ class Critic(nn.Module):
         the dimension of the conditioning data
     hidden_dim: int
         the inner dimension, a scalar
+
+    Methods
+    -------
+    forward: computes the forward pass through the critic.
+
     """
 
     def __init__(self,
@@ -161,6 +175,10 @@ class Critic(nn.Module):
             tensor of bv features from data loader (n_batch, n_alt, n_bv_feat)
         src_key_mask: torch.Tensor, optional
             mask for bv features from data loader (n_batch, n_alt)
+
+        Returns
+        ----------
+        pred: the numeric prediction value
         """
         if src_key_mask is None:
             src_key_mask = torch.zeros(

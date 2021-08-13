@@ -9,9 +9,7 @@ import numpy as np
 
 def mask_altitude(bv_feat):
     """
-    Creates an altitude mask for nans in bvs.
-
-    Also replaces nans with numbers.
+    Creates an altitude mask for nans in bvs. Also replaces nans with numbers.
 
     Parameters
     ----------------

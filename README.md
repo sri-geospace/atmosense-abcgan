@@ -56,6 +56,18 @@ For end user installation:
 pip install .
 ```
 
+### Build docs
+```bash
+cd docs
+```
+```cmd
+make clean
+```
+```cmd
+make html
+```
+
+
 ### Run tests
 
 Make sure to have completed the development. From the top level directory 'atomesense-abcgan' run:
