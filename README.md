@@ -1,6 +1,6 @@
 # About this project
 
-This project uses a generative adversarial network (GAN) to produce a Generator and a Discriminator to characterize the normal atmospheric background. It provides the ability to sample atmospheric parameters, creating full altitude profiles of the sampled measurements. The current system is trained on over 10 yeras of Inverse Scatter Radar data collected in Alaska at the Poker Flat Radar Range.
+This project uses a generative adversarial network (GAN) to produce a Generator and a Discriminator to characterize the normal atmospheric background. It provides the ability to sample atmospheric parameters, creating full altitude profiles of the sampled measurements. The current system is trained on over 10 years of Inverse Scatter Radar data collected in Alaska at the Poker Flat Radar Range.
 
 ## Purpose / Vision
 
