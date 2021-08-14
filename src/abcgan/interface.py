@@ -1,7 +1,6 @@
 """
-Code for top level interface.
+Code for top level interface to the saved model.
 
-This code is added to the main package level in __init__.py
 """
 import numpy as np
 from . import constants as const
@@ -137,6 +136,11 @@ def stack_drivers(driver_dict):
         If the driver values have the wrong type or shape.
     KeyError:
         If one of the required drivers is missing.
+
+    Returns
+    ________________
+    stack: np.array
+        drivers stacked on axis=-1
     """
     if isinstance(driver_dict, h5py.Group):
         driver_dict = {k: v[()] for k, v in driver_dict.items()}
@@ -153,8 +157,10 @@ def stack_drivers(driver_dict):
         if shp != v.shape:
             raise ValueError("All values in driver_dict must have"
                              " the same length.")
-    return np.stack([driver_dict[k] for k in const.driver_names],
+
+    stack = np.stack([driver_dict[k] for k in const.driver_names],
                     axis=-1)
+    return stack
 
 
 def stack_bvs(bv_dict):
@@ -168,10 +174,11 @@ def stack_bvs(bv_dict):
     bv_dict: dict
         Dictionary mapping names of background variables
         to numpy arrays with values for those bvs. Each
-        array should have shape n_sapmles x n_altitudes.
+        array should have shape n_samples x n_altitudes.
         Can also use `h5py.Group`.
 
     Valid names for drivers can be found at `abcgan.bv_names`
+
 
     Raises
     ------------------
@@ -179,6 +186,12 @@ def stack_bvs(bv_dict):
         If the input shape of the bv dict values is not corrects
     KeyError:
         If one of the required bvs is missing.
+
+
+    Returns
+    ________________
+    stack: np.array
+        drivers stacked on axis=-1
     """
     if isinstance(bv_dict, h5py.Group):
         bv_dict = {k: v[()] for k, v in bv_dict.items()}
@@ -195,5 +208,6 @@ def stack_bvs(bv_dict):
         if shp != v.shape:
             raise ValueError("All values in bv_dict must have the"
                              " same shape.")
-    return np.stack([bv_dict[k] for k in const.bv_names],
+    stack = np.stack([bv_dict[k] for k in const.bv_names],
                     axis=-1)
+    return stack

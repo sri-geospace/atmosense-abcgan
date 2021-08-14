@@ -1,3 +1,6 @@
+"""
+Code containing the transformer and attention model.
+"""
 from typing import Optional
 import torch
 import torch.nn as nn
@@ -8,14 +11,22 @@ from torch import Tensor
 
 class Transformer(nn.Module):
     """Transformer with only the encoder
-    Parameters:
-        d_model: the number of expected features in the encoder/decoder inputs
-        d_stack: the number of features to stack to output
-        nhead: the number of heads in the multiheadattention models
-        num_encoder_layers: the number of sub-encoder-layers in the encoder
-        dim_feedforward: the dimension of the feedforward network model
-        dropout: the dropout value
-        activation: the activation function of encoder/decoder intermediate layer
+    Attributes
+    ----------
+    d_model: int
+        the number of expected features in the encoder/decoder inputs
+    d_stack: int
+        he number of features to stack to output
+    nhead: int
+        the number of heads in the multiheadattention models
+    num_encoder_layers: int
+        the number of sub-encoder-layers in the encoder
+    dim_feedforward: int
+        the dimension of the feedforward network model
+    dropout: float
+        the dropout value
+    activation: the activation function of encoder/decoder intermediate layer
+
     """
 
     def __init__(self,
@@ -24,9 +35,12 @@ class Transformer(nn.Module):
                  n_alt: int = const.max_alt,
                  d_model: int = 64,
                  d_stack: int = 0,
-                 nhead: int = 1, num_encoder_layers: int = 1,
-                 dim_feedforward: int = 64, dropout: float = 0.0,
+                 nhead: int = 1,
+                 num_encoder_layers: int = 1,
+                 dim_feedforward: int = 64,
+                 dropout: float = 0.0,
                  activation: str = "relu") -> None:
+
         super().__init__()
         # args captured for persistence
         d_out = d_bv + d_stack
@@ -73,16 +87,23 @@ class Transformer(nn.Module):
                 src_key_padding_mask: Optional[Tensor] = None):
         """
         Take in and process masked source/target sequences.
-        Args:
-            driver_src: the sequence to the encoder (required).
-            bv_src: the sequence to the decoder (required).
-            src_key_padding_mask: the ByteTensor mask for src keys per batch
-            (optional).
-        Shape:
-            - driver_src: :math:`(n_batch, d_dr)`.
-            - bv_src: :math:`(n_batch, n_alt, d_bv)`.
-            - src_key_padding_mask: :math:`(n_batch, n_alt)`.
+
+        Parameters
+        ----------
+        driver_src: Tensor
+            the sequence to the encoder (required).
+        bv_src: Tensor
+            the sequence to the decoder (required).
+        src_key_padding_mask: the ByteTensor mask for src keys per batch (optional).
+
+
+        Shape
+        ------
+        driver_src: (n_batch, d_dr).
+        bv_src: (n_batch, n_alt, d_bv).
+        src_key_padding_mask: (n_batch, n_alt).
         """
+
         bv_shift = torch.roll(bv_src.transpose(0, 1) @ self.bv_emb, 1, dims=0)
         bv_shift[0, :, :] = self.start_token.unsqueeze(1)
         src = (driver_src.unsqueeze(0) @ self.dr_emb + bv_shift +
@@ -102,8 +123,9 @@ class Transformer(nn.Module):
     def generate_square_subsequent_mask(self, sz: int) -> Tensor:
         """
         Generate a square mask for the sequence. The masked positions are
-        filled with float('-inf').
-        Unmasked positions are filled with float(0.0).
+        filled with '-inf'.
+        Unmasked positions are filled with '0.0'.
+
         """
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
         mask = mask.float().masked_fill(mask == 0, float('-inf'))
@@ -111,7 +133,10 @@ class Transformer(nn.Module):
         return mask
 
     def _reset_parameters(self):
-        """Initiate parameters in the transformer model."""
+        """
+        Initiate parameters in the transformer model.
+
+        """
         with torch.no_grad():
             for p in self.parameters():
                 if p.dim() > 1:
