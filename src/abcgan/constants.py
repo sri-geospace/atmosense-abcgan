@@ -1,5 +1,6 @@
 """
-File for global constants used in the program.
+File for global constants used in the program. Import for defining the structure and number of variables in the driver parameters, number of altitude bins, output data products, ...
+
 """
 import numpy as np
 
