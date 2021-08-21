@@ -57,16 +57,33 @@ pip install .
 ```
 
 ### Build docs
+Documents are available on read-the-docs. You may also create the docs. Building docs requires sphinx (optional). 
+You'll need to run 
 ```bash
-cd docs
+pip install sphinx
+sphinx-quickstart
 ```
+create documents folder
+```cmd
+mkdir docs
+```
+go to document source directory and configure sphinx per the documentation https://www.sphinx-doc.org/en/master/usage/configuration.html
+```cmd
+cd docs
+cd source
+```
+generate source files using api-doc (see https://www.sphinx-doc.org/en/master/man/sphinx-apidoc.html for details) and return to docs root
+```bash
+sphinx-apidoc -o . ../../src/abcgan
+cd ..
+```
+finally, build the docs
 ```cmd
 make clean
 ```
 ```cmd
 make html
 ```
-
 
 ### Run tests
 

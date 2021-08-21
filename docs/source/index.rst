@@ -1,5 +1,5 @@
 
-atmosense-abcgan documentation
+abcgan
 ============================================
 
 
