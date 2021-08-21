@@ -57,28 +57,46 @@ pip install .
 ```
 
 ### Build docs
-Documents are available on read-the-docs. You may also create the docs. Building docs requires sphinx (optional). 
+Documents are available on read-the-docs. You may also create the docs. Configuration files are supplied, simply install 
+sphinx,  navigate to ./docs/source, and make the docs
+```cmd
+pip install sphinx
+cd docs
+make html
+```
+If you wish to modify the code and later merge the code into the master branch, ou will need to update the docs build (optional). 
 You'll need to run 
 ```bash
 pip install sphinx
+mkdir docs
+cd docs
 sphinx-quickstart
 ```
-create documents folder
-```cmd
-mkdir docs
-```
 go to document source directory and configure sphinx per the documentation https://www.sphinx-doc.org/en/master/usage/configuration.html
+
 ```cmd
-cd docs
 cd source
 ```
-generate source files using api-doc (see https://www.sphinx-doc.org/en/master/man/sphinx-apidoc.html for details) and return to docs root
-```bash
-sphinx-apidoc -o . ../../src/abcgan
-cd ..
+edit conf.py, uncomment these lines
+```cmd
+import os
+import sys
+sys.path.insert(0, os.path.abspath('.'))
+
 ```
+in conf.py, add this line to support numpy and Google docstrings or other extensions https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html?highlight=sphinx.ext
+```cmd
+extensions = ['sphinx.ext.napoleon']
+```
+
+generate source files using api-doc (see https://www.sphinx-doc.org/en/master/man/sphinx-apidoc.html for details) and return to docs root
+```cmd
+sphinx-apidoc -o . ../../src/abcgan
+```
+
 finally, build the docs
 ```cmd
+cd ..
 make clean
 ```
 ```cmd
