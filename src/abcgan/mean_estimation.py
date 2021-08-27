@@ -96,7 +96,6 @@ class Transformer(nn.Module):
             the sequence to the decoder (required).
         src_key_padding_mask: the ByteTensor mask for src keys per batch (optional).
 
-
         Shape
         ------
         driver_src: (n_batch, d_dr).
