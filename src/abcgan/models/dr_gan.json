@@ -1,0 +1,15 @@
+{
+  "gen_input": {
+    "n_layers": 2,
+    "latent_dim": 16,
+    "img_dim": 18,
+    "hidden_dim": 128
+  },
+  "gen_type": "abcgan.model.Driver_Generator",
+  "crit_input": {
+    "n_layers": 2,
+    "img_dim": 18,
+    "hidden_dim": 128
+  },
+  "crit_type": "abcgan.model.Driver_Critic"
+}

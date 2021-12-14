@@ -40,7 +40,7 @@ class TestTransformerEstimation(unittest.TestCase):
         est_bv = model(driver, bvs)
         self.assertEqual(est_bv.shape,
                          (bvs.shape[0], bvs.shape[1],
-                          bvs.shape[2] + model.d_stack))
+                          model.d_model))
 
     def test_scr_key_mask(self):
         n = 10
@@ -53,7 +53,7 @@ class TestTransformerEstimation(unittest.TestCase):
         est_bv = model(driver, bvs, mask)
         self.assertEqual(est_bv.shape,
                          (bvs.shape[0], bvs.shape[1],
-                          bvs.shape[2] + model.d_stack))
+                          model.d_model))
 
 
 if __name__ == '__main__':
