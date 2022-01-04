@@ -71,10 +71,13 @@ pip install sphinx
 mkdir docs
 cd docs
 sphinx-quickstart
+pip install sphinxcontrib-napoleon
 ```
-go to document source directory and configure sphinx per the documentation https://www.sphinx-doc.org/en/master/usage/configuration.html
+
+go to document source directory (only if selecting separate source and build directories) and configure sphinx per the documentation https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 ```cmd
+(optional)
 cd source
 ```
 edit conf.py, uncomment these lines
@@ -86,14 +89,24 @@ sys.path.insert(0, os.path.abspath('.'))
 ```
 in conf.py, add this line to support numpy and Google docstrings or other extensions https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html?highlight=sphinx.ext
 ```cmd
-extensions = ['sphinx.ext.napoleon']
+extensions = ['sphinxcontrib.napoleon']
 ```
 
 generate source files using api-doc (see https://www.sphinx-doc.org/en/master/man/sphinx-apidoc.html for details) and return to docs root
 ```cmd
-sphinx-apidoc -o . ../../src/abcgan
+sphinx-apidoc -o . ../src/abcgan
 ```
+note that .rst files are generated from the installed module not the source tree; to reference local changes make sure the installation is performed with pip install -e .
 
+add the lines to conf.py if not there already
+```cmd 
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   abcgan
+   modules
+```
 finally, build the docs
 ```cmd
 cd ..
