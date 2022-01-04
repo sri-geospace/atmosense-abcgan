@@ -60,6 +60,7 @@ class Generator(nn.Module):
         Function for completing a forward pass of the generator:
         Given a noise tensor,
         returns generated images.
+
         Parameters
         --------------
         driver_src: torch.Tensor
@@ -180,7 +181,7 @@ class Driver_Generator(nn.Module):
     Generator Class
 
     Parameters
-    -----------
+    ----------------
     n_layers: int
         number of MLP layers
     latent_dim: int
@@ -226,6 +227,7 @@ class Driver_Generator(nn.Module):
         forward pass of the generator for driver augmentation:
         Given driver sample from the past and noise tensor,
         returns generated driver sample.
+
         Parameters
         --------------
         dr_prev: torch.Tensor
