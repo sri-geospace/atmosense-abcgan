@@ -31,6 +31,8 @@ def fullname(inst):
 types = [
     model.Generator,
     model.Critic,
+    model.Driver_Generator,
+    model.Driver_Critic,
     me.Transformer
 ]
 # register types of objects that can be persisted
@@ -39,25 +41,25 @@ type_dict = {fullname(t): t for t in types}
 
 def persist(generator, critic, name='wgan_gp', dir_path=dir_path):
     """
-    Persists abcgan generator and critic modules. Persists both input arguments and parameters.
+    Persists abcgan generator and critic modules.
 
+    Persists both input arguments and parameters.
 
-    Parameters
-    ----------
-    generator: torch.nn.Module
-        module for the generator
-    critic: torch.nn.Module
-        module for the critic
-    name: str, optional
-        name of the saved configuration
-    dir_path: str, optional
-        default is the models directory. None assumes
-        file is in local directory.
+    Parameters:
+        generator: torch.nn.Module
+            module for the generator
+        critic: torch.nn.Module
+            module for the critic
+        name: str, optional
+            name of the saved configuration
+        dir_path: str, optional
+            default is the models directory. None assumes
+            file is in local directory.
 
     The generator, critic and any transformers passed in as
     arguments to these must be registered in persist.py and must
     have a parameter 'input_args' that specifies their input
-    arguments as a dictionary.
+    arguments as a dictionary
     """
     if dir_path is not None:
         name = os.path.join(dir_path, name)
@@ -105,7 +107,7 @@ def recreate(name='wgan_gp', dir_path=dir_path):
     critic: torch.nn.module
         the loaded critic
 
-    Modules must have previously been saved. All modules are
+    Modules must have previosuly been saved. All modules are
     loaded on the cpu, they can subsequently be moved.
     """
     if dir_path is not None:

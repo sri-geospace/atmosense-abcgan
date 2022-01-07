@@ -1,15 +1,47 @@
-"""
-Code for masking bad training data points. It replaces NaN values floating point numbers.
-
-"""
-
 import torch
 import numpy as np
+import abcgan.constants as const
+
+
+def prev_driver_mask(unix_time):
+    """
+    Creates a driver mask of samples that have a previous sample
+    and a mapping vector to the previous sample.
+
+    Parameters
+    ----------------
+    unix_time: np.array
+        time stamp of driver samples
+
+    Returns
+    ----------------
+    prev_dr_map: np.array
+        vector mapping each sample to its delayed sample
+    dr_mask: torch.Tensor
+        Mask of valid driver samples that have a delayed sample
+    """
+
+    # Determine time differences between each
+    # sample and the previous 6 samples
+    diff = np.zeros((len(unix_time), 6))
+    for i in range(6, len(unix_time)):
+        diff[i, :] = np.flip(unix_time[i] - unix_time[i - 6: i])
+
+    # Create mask of samples that have a previous sample equal to
+    # the specified delay time and a mapping vector to the
+    # current driver data structure
+    dr_mask = (diff == const.dr_delay).any(-1)
+    prev_dr_map = np.where(diff == const.dr_delay)[0] - \
+                  np.where(diff == const.dr_delay)[1]
+
+    return prev_dr_map, dr_mask
 
 
 def mask_altitude(bv_feat):
     """
-    Creates an altitude mask for nans in bvs. Also replaces nans with numbers.
+    Creates an altitude mask for nans in bvs.
+
+    Also replaces nans with numbers.
 
     Parameters
     ----------------
