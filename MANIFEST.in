@@ -1,1 +1,5 @@
 recursive-include src/abcgan/models *
+recursive-include tests * 
+recursive-include tutorials * 
+recursive-include docs * 
+include VERSION
