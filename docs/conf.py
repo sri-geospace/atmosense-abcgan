@@ -12,17 +12,19 @@
 #
 import os
 import sys
+import pkg_resources
 sys.path.insert(0, os.path.abspath('.'))
 
 
 # -- Project information -----------------------------------------------------
 
 project = 'Atmospheric Background Characterization Generative Adversarial Network (ABCGAN)'
-copyright = '2022, Sam Austin, David Stoker, Andrew Silberfarb'
-author = 'Sam Austin, David Stoker, Andrew Silberfarb'
+copyright = '2021-2022, SRI International' 
+author = 'ABCGAN Project Team'
 
 # The full version, including alpha/beta/rc tags
-release = '0.2'
+version = pkg_resources.get_distribution('abcgan').version
+release = version 
 
 
 # -- General configuration ---------------------------------------------------
@@ -49,7 +51,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-#html_theme = 'classic'
 html_theme = 'sphinx_rtd_theme'
 
 # Add any paths that contain custom static files (such as style sheets) here,
