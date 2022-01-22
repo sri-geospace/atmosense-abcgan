@@ -4,6 +4,8 @@ This project uses a generative adversarial network (GAN) to produce a Generator 
 
 Currently the project supports the sampling of low frequency measurements conditioned on high altitude drivers (solar flux, solar zenith angle, etc.). The project goal is to augment this initial capability through generation of high frequency distrubances (waves) as well as allowing conditioning on ground based drivers (terrain, etc.).
 
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sri-geospace/atmosense-abcgan/HEAD?labpath=tutorials%2Fdemo.ipynb)
+
 ## Installing abcgan
 
 This package is available on PyPI and can be installed with pip. It is
@@ -28,6 +30,10 @@ installed along with the abcgan package.
 After downloading the tutorials, install the required packages listed
 in tutorials/requirements.txt using pip.  You can then start Jupyter Lab
 and load the tutorial notebook tutorial/demo.ipynb.
+
+## Running the tutorials on Binder
+
+You can run the tutorial notebooks at any time on [Binder](https://mybinder.org/v2/gh/sri-geospace/atmosense-abcgan/HEAD?labpath=tutorials%2Fdemo.ipynb). A Docker container will be automatically created with the abcgan package and tutorials.
 
 ```cmd
 abcgan-cmd download tutorials
