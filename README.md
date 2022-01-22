@@ -6,13 +6,35 @@ Currently the project supports the sampling of low frequency measurements condit
 
 ## Installing abcgan
 
-This package is available on PyPI and can be installed with pip:
+This package is available on PyPI and can be installed with pip. It is
+best to do this in a Python virtual environment:
 
 ```bash
+python -m venv venv
+. venv/bin/activate
+
 pip install abcgan
 ```
 
 It requires Python 3.8+ and uses PyTorch 1.8+.
+
+## Downloading the tutorials
+
+The tutorials are available as Jupyter notebooks and are located along
+with sample data in the tutorial directory in the github repository.
+You can download these tutorials with the abcgan-cmd program which is
+installed along with the abcgan package.
+
+After downloading the tutorials, install the required packages listed
+in tutorials/requirements.txt using pip.  You can then start Jupyter Lab
+and load the tutorial notebook tutorial/demo.ipynb.
+
+```cmd
+abcgan-cmd download tutorials
+pip install -r tutorials/requirements.txt
+
+jupyter lab 
+```
 
 ## Contents
 
@@ -22,6 +44,7 @@ The content of this repository entails:
 * Test code inside 'test'
 * Tutorials inside 'tutorials'
 * Pre-trained models inside 'models'
+* Helper scripts in 'contrib'
 
 ## Installation from source
 
@@ -32,17 +55,19 @@ Pytorch installation will be specific to your system configuraiton depending on 
 git clone https://github.com/sri-geospace/atmosense-abcgan.git
 ```
 
-```cmd
-cd atmosense-abcgan
-```
 For end user installation:
 ```cmd
-pip install .
+pip install atmosense-abcgan 
 ```
 
-## Building docs
+For development:
+```cmd
+pip install -e atmosense-abcgan 
+```
 
-Documents are available on [Read the Docs](https://github.com/valentic/atmosense-abcgan). You may also create the docs. Configuration files are supplied, including a requirements file with the necessary dependencies. 
+## Building the documentation 
+
+The package documentation is available on [Read the Docs](https://github.com/valentic/atmosense-abcgan). You may also build the docs locatlly. The configuration files and document sources are in the docs/ directory, including a requirements file with the necessary dependencies. 
 
 ```cmd
 cd docs
@@ -50,13 +75,13 @@ pip install -r requirements.txt
 make html
 ```
 
-generate source files using api-doc (see https://www.sphinx-doc.org/en/master/man/sphinx-apidoc.html for details) and return to docs root
+The API source files are generated using [api-doc](https://www.sphinx-doc.org/en/master/man/sphinx-apidoc.html):
 ```cmd
 sphinx-apidoc -o . ../src/abcgan
 ```
-note that .rst files are generated from the installed module not the source tree; to reference local changes make sure the installation is performed with pip install -e .
+Note that .rst files are generated from the installed module not the source tree; to reference local changes make sure the installation is performed with pip install -e .
 
-add the lines to conf.py if not there already
+Add the lines to conf.py if not there already:
 ```cmd 
 .. toctree::
    :maxdepth: 2
@@ -65,12 +90,9 @@ add the lines to conf.py if not there already
    abcgan
    modules
 ```
-finally, build the docs
+Finally, build the docs:
 ```cmd
-cd ..
 make clean
-```
-```cmd
 make html
 ```
 
