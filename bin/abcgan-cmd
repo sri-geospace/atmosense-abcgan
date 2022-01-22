@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+
+##########################################################################
+#
+#   ABCGAN asset downloader
+#
+#   The purpose of this program is to allow end users to directly 
+#   download components of the ABCGAN repo, such as the tutorials.
+#
+#   2022-01-20  Todd Valentic
+#               Initial implementation
+#
+##########################################################################
+
+import sys
+import io 
+import fnmatch
+import pathlib
+import argparse
+import requests 
+import tarfile
+
+#-------------------------------------------------------------------------
+# Command Processors 
+#-------------------------------------------------------------------------
+
+def log(args, msg):
+    
+    if not args.quiet:
+        print(msg)
+
+def filter_members(tar, match_path='*', strip_components=None):
+    
+    for member in tar.getmembers():
+
+        if fnmatch.fnmatch(member.path, match_path):
+
+            if strip_components:
+                path = pathlib.Path(member.path)
+                path = path.relative_to(*path.parts[:strip_components])
+                member.path = path
+
+            yield member
+
+def ProcessDownload(args): 
+
+    log(args, f'Downloading files from repo {args.repo}')
+
+    url = 'https://github.com/{args.repo}/archive/refs/heads/main.tar.gz'
+
+    result = requests.get(URL, timeout=args.timeout) 
+
+    byte_stream = io.BytesIO(result.content)
+    
+    log(args, f'Extracting {args.asset}')
+
+    match = f'*/{args.asset}/*'
+
+    with tarfile.open(fileobj=byte_stream) as tar:
+        members = filter_members(tar, match_path=match, strip_components=1)
+        tar.extractall(members=members)
+
+    log(args, 'Finished')
+
+    return True
+
+#-------------------------------------------------------------------------
+# Command Maps
+#-------------------------------------------------------------------------
+
+Commands = {
+    'download':        ProcessDownload,
+    }
+
+if __name__ == '__main__':
+
+    desc = 'ABCGAN Asset Downloader'
+    parser = argparse.ArgumentParser(description=desc)
+    subparsers = parser.add_subparsers(dest='command', required=True)
+
+    download_parser = subparsers.add_parser('download')
+
+    download_parser.add_argument('asset',choices=['tutorials','docs'])
+
+    parser.add_argument('-r','--repo',dest='repo',
+                        default='sri-geospace/abcgan',
+                        help='Github repo (default sri-geospace/abcgan)')
+
+    parser.add_argument('-t','--timeout',dest='timeout',
+                        default=5,type=int,metavar='SECS',
+                        help='Timeout in seconds (default 5)')
+
+    parser.add_argument('-q','--quiet',dest='quiet',
+                        action='store_true',
+                        help='Do not display output messages')
+
+    #-- Process -----------------------------------------------------------
+
+    args = parser.parse_args()
+
+    result = Commands[args.command](args) 
+
+    sys.exit(0 if result else 1)
+

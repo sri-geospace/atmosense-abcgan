@@ -1,0 +1,39 @@
+{
+  "gen_trans_input": {
+    "d_dr": 18,
+    "d_bv": 12,
+    "n_alt": 30,
+    "d_model": 256,
+    "nhead": 2,
+    "num_encoder_layers": 4,
+    "dim_feedforward": 1024,
+    "dropout": 0.0,
+    "activation": "relu"
+  },
+  "gen_trans_type": "abcgan.mean_estimation.Transformer",
+  "crit_trans_input": {
+    "d_dr": 18,
+    "d_bv": 12,
+    "n_alt": 30,
+    "d_model": 256,
+    "nhead": 2,
+    "num_encoder_layers": 4,
+    "dim_feedforward": 1024,
+    "dropout": 0.0,
+    "activation": "relu"
+  },
+  "crit_trans_type": "abcgan.mean_estimation.Transformer",
+  "gen_input": {
+    "n_layers": 4,
+    "latent_dim": 16,
+    "img_dim": 12,
+    "hidden_dim": 256
+  },
+  "gen_type": "abcgan.model.Generator",
+  "crit_input": {
+    "n_layers": 4,
+    "img_dim": 12,
+    "hidden_dim": 256
+  },
+  "crit_type": "abcgan.model.Critic"
+}
