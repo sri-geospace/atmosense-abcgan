@@ -31,16 +31,17 @@ After downloading the tutorials, install the required packages listed
 in tutorials/requirements.txt using pip.  You can then start Jupyter Lab
 and load the tutorial notebook tutorial/demo.ipynb.
 
-## Running the tutorials on Binder
-
-You can run the tutorial notebooks at any time on [Binder](https://mybinder.org/v2/gh/sri-geospace/atmosense-abcgan/HEAD?labpath=tutorials%2Fdemo.ipynb). A Docker container will be automatically created with the abcgan package and tutorials.
-
 ```cmd
 abcgan-cmd download tutorials
 pip install -r tutorials/requirements.txt
 
 jupyter lab 
 ```
+## Running the tutorials on Binder
+
+You can run the tutorial notebooks at any time on [Binder](https://mybinder.org/v2/gh/sri-geospace/atmosense-abcgan/HEAD?labpath=tutorials%2Fdemo.ipynb). A Docker container will be automatically created with the abcgan package and tutorials.
+
+https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sri-geospace/atmosense-abcgan/HEAD?labpath=tutorials%2Fdemo.ipynb
 
 ## Contents
 
