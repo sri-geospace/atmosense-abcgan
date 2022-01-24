@@ -5,9 +5,7 @@ This project uses a generative adversarial network (GAN) to produce a Generator 
 Currently the project supports the sampling of low frequency measurements conditioned on high altitude drivers (solar flux, solar zenith angle, etc.). The project goal is to augment this initial capability through generation of high frequency distrubances (waves) as well as allowing conditioning on ground based drivers (terrain, etc.).
 
 [![Documentation Status](https://readthedocs.org/projects/atmosense-abcgan/badge/?version=latest)](https://atmosense-abcgan.readthedocs.io/en/latest/?badge=latest)
-
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sri-geospace/atmosense-abcgan/HEAD?labpath=tutorials%2Fdemo.ipynb)
-
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5889629.svg)](https://doi.org/10.5281/zenodo.5889629)
 
 ## Installing abcgan
