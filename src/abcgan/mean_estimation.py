@@ -7,24 +7,15 @@ from torch import Tensor
 
 
 class Transformer(nn.Module):
-    """Transformer Class with only the encoder
-
-    Parameters
-    ----------------
-        d_model: int
-            the number of expected features in the encoder/decoder inputs
-        d_stack: int
-            the number of features to stack to output
-        nhead: int
-            the number of heads in the multiheadattention models
-        num_encoder_layers: int
-            the number of sub-encoder-layers in the encoder
-        dim_feedforward: int
-            the dimension of the feedforward network model
-        dropout: int
-            the dropout value
-        activation: str
-            the activation function of encoder/decoder intermediate layer
+    """Transformer with only the encoder
+    Parameters:
+        d_model: the number of expected features in the encoder/decoder inputs
+        d_stack: the number of features to stack to output
+        nhead: the number of heads in the multiheadattention models
+        num_encoder_layers: the number of sub-encoder-layers in the encoder
+        dim_feedforward: the dimension of the feedforward network model
+        dropout: the dropout value
+        activation: the activation function of encoder/decoder intermediate layer
     """
 
     def __init__(self,
@@ -77,15 +68,15 @@ class Transformer(nn.Module):
                 src_key_padding_mask: Optional[Tensor] = None):
         """
         Take in and process masked source/target sequences.
-
-        Parameters
-        ----------------
-            driver_src: torch.Tensor
-                (n_batch, d_dr) the sequence to the encoder (required) .
-            bv_src: torch.Tensor
-                (n_batch, n_alt, d_bv) the sequence to the decoder (required).
-            src_key_padding_mask: torch.Tensor, optional
-                the ByteTensor mask for src keys per batch (optional).
+        Args:
+            driver_src: the sequence to the encoder (required).
+            bv_src: the sequence to the decoder (required).
+            src_key_padding_mask: the ByteTensor mask for src keys per batch
+            (optional).
+        Shape:
+            - driver_src: :math:`(n_batch, d_dr)`.
+            - bv_src: :math:`(n_batch, n_alt, d_bv)`.
+            - src_key_padding_mask: :math:`(n_batch, n_alt)`.
         """
         bv_shift = torch.roll(bv_src.transpose(0, 1) @ self.bv_emb, 1, dims=0)
         bv_shift[0, :, :] = self.start_token.unsqueeze(1)
@@ -101,11 +92,7 @@ class Transformer(nn.Module):
         """
         Generate a square mask for the sequence. The masked positions are
         filled with float('-inf').
-
-        Parameters
-        ----------------
-            sz: int
-                Unmasked positions are filled with float(0.0).
+        Unmasked positions are filled with float(0.0).
         """
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
         mask = mask.float().masked_fill(mask == 0, float('-inf'))

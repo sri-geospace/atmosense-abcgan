@@ -1,7 +1,8 @@
 import unittest
 import os
 from abcgan import persist
-from abcgan import model
+from abcgan import bv_model
+from abcgan import hfp_model
 import abcgan.mean_estimation as me
 import abcgan.constants as const
 import torch
@@ -19,9 +20,17 @@ info_file = os.path.join(dir_path, fname + '.json')
 
 def gen_modules():
     tgen = me.Transformer()
-    gen = model.Generator(tgen)
+    gen = bv_model.Generator(tgen)
     tcrit = me.Transformer()
-    crit = model.Critic(tcrit)
+    crit = bv_model.Critic(tcrit)
+    return gen, crit
+
+
+def hfp_modules():
+    tgen = hfp_model.HFP_Transformer(output_b=True)
+    gen = hfp_model.HFP_Generator(tgen)
+    tcrit = hfp_model.HFP_Transformer()
+    crit = hfp_model.HFP_Critic(tcrit)
     return gen, crit
 
 # generate fake inputs
@@ -43,6 +52,24 @@ def test_modules(gen, crit):
     return gen_valid, crit_valid
 
 
+def test_hfp_modules(gen, crit):
+    n_batch = 10
+    n_alt = const.max_alt
+    n_bv_feat = const.n_bv_feat
+    n_dr_feat = const.n_driver_feat
+
+    driver_src = torch.zeros(n_batch, n_dr_feat)
+    bv_src = torch.zeros(n_batch, n_alt, n_bv_feat)
+    hfp = torch.zeros(n_batch, const.n_waves, const.n_hfp_feat)
+    b = torch.zeros(n_batch)
+
+    gen_output, b = gen(driver_src, bv_src, hfp)
+    gen_valid = not gen_output.isnan().any().item() and not b.isnan().any().item()
+    crit_output = crit(driver_src, bv_src, hfp, hfp)
+    crit_valid = not crit_output.isnan().any().item()
+    return gen_valid, crit_valid
+
+
 class Persist(unittest.TestCase):
 
     def test_persist(self):
@@ -55,6 +82,16 @@ class Persist(unittest.TestCase):
         self.assertTrue(os.path.exists(param_file))
         self.assertTrue(os.path.exists(info_file))
 
+    def test_hfp_persist(self):
+        if os.path.exists(param_file):
+            os.remove(param_file)
+        if os.path.exists(info_file):
+            os.remove(info_file)
+        gen, crit = hfp_modules()
+        persist.persist(gen, crit, fname, dir_path)
+        self.assertTrue(os.path.exists(param_file))
+        self.assertTrue(os.path.exists(info_file))
+
     def test_recreate(self):
         if not os.path.exists(param_file):
             gen_in, crit_in = gen_modules()
@@ -62,6 +99,16 @@ class Persist(unittest.TestCase):
         gen, crit = persist.recreate(fname, dir_path)
         # test that loaded modules are working
         gen_valid, crit_valid = test_modules(gen, crit)
+        self.assertTrue(gen_valid)
+        self.assertTrue(crit_valid)
+
+    def test_hfp_recreate(self):
+        if not os.path.exists(param_file):
+            gen_in, crit_in = hfp_modules()
+            persist.persist(gen_in, crit_in, fname, dir_path)
+        gen, crit = persist.recreate(fname, dir_path)
+        # test that loaded modules are working
+        gen_valid, crit_valid = test_hfp_modules(gen, crit)
         self.assertTrue(gen_valid)
         self.assertTrue(crit_valid)
 

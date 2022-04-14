@@ -3,7 +3,6 @@ File for global constants used in the program.
 """
 import numpy as np
 
-
 # Driver augmentation delay cond
 dr_delay = 2 * 3600  # 2 hours
 
@@ -13,7 +12,8 @@ batch_size = 100
 # Feature sizes
 max_alt = 30
 max_alt_lidar = 20
-max_hfp_alt = 30
+max_n_waves = 3
+n_waves = 1
 
 # Alt bins for metrics
 alt_bins = [[0, 1, 2, 3],
@@ -25,47 +25,35 @@ alt_bins = [[0, 1, 2, 3],
 
 # Alt bins for metrics
 alt_bins_lidar = [[0, 1, 2],
-               [3, 4, 5],
-               [6, 7, 8, 9],
-               [10, 11, 12],
-               [14, 15, 16],
-               [17, 18, 19]]
+                  [3, 4, 5],
+                  [6, 7, 8, 9],
+                  [10, 11, 12],
+                  [14, 15, 16],
+                  [17, 18, 19]]
 
-# Alt bins for metrics
-alt_bins_all = [[0],
-            [1],
-            [2],
-            [3],
-            [4],
-            [5],
-            [6],
-            [7],
-            [8],
-            [9],
-            [10],
-            [11],
-            [12],
-            [13],
-            [14],
-            [15],
-            [16],
-            [17],
-            [18],
-            [19],
-            [20],
-            [21],
-            [22],
-            [23],
-            [24],
-            [25],
-            [26],
-            [27],
-            [28],
-            [29]]
+altgrid = np.concatenate((np.arange(92., 119., 4.5),
+                          np.arange(119., 146., 9.),
+                          np.arange(146., 200., 18.),
+                          np.arange(200., 800., 24.)))
 
 # List of hfp variables
-hpf_names = ['W_period', 'W_hor', 'W_vert', 'W_phase', 'W_dir', 'W_alt']
-n_hfp = len(hpf_names)
+hfp_names = ['GW_tau', 'GW_lamh', 'GW_lamv', 'GW_ch', 'GW_cv', 'GW_phi', 'GW_hl', 'GW_hu']
+hfp_units = ['min', 'km', 'km', 'm/s', 'm/s', 'degree', 'km', 'km']
+n_hfp = len(hfp_names)
+
+# HFP features to log scale
+log_hfp = [0, 1, 2, 3, 4]
+invert_hfp = [2, 4]
+
+# z_scaled clip ranges for each hfp feats for hellinger dist calculation
+hfp_z_ranges = [(-2.4, 4), (-4, 4), (-4, 4), (-4, 4), (-4, 4), (-1.5, 1.8),  (-0.7, 4), (-4, 1.5)]
+
+# constants used to determine number of bins
+# and averaging filter length to use during hellinger dist calculation
+bin_exp = 55 / 100
+filter_exp = 1 / 3
+
+
 
 # List types of background variables
 bv_vars = ['Ne', 'Te', 'Ti', 'Ve', 'Vn', 'Vu']
@@ -77,6 +65,18 @@ bv_names = [v + '_' + s
 
 n_bv = len(bv_names)
 
+bv_full_names = [r'Electron Density', r'RMS Electron Density', r'Electron Temp',
+                 r'RMS Electron Temp', r'Ion Temp', r'RMS Ion Temp',
+                 r'Northern Vel', r'RMS Northern Vel',
+                 r'Upper Vel', r'RMS Upper Vel',
+                 r'Eastward Vel', r'RMS Eastward Vel', ]
+
+bv_units = [r'Density (m$^{-3}$)', r'Density (m$^{-3}$)', r'Temp (k)',
+            r'Temp (k)', r'Temp (k)', r'Temp (k)',
+            r'Vel (m/s)', r'Vel (m/s)',
+            r'Vel (m/s)', r'Vel (m/s)',
+            r'Vel (m/s)', r'Vel (m/s)', ]
+
 lidar_bv_names = ['Tn_bac', 'dTn_bac', 'Nn_bac', 'dNn_bac']
 n_lidar_bv = len(lidar_bv_names)
 
@@ -85,6 +85,18 @@ driver_names = ['Ap', 'F10.7', 'F10.7avg',
                 'MLT', 'SLT', 'SZA', 'ap',
                 'MEI', 'RMM1', 'RMM2', 'TCI',
                 'moon_phase', 'moon_x', 'moon_y', 'moon_z']
+
+driver_names_full = [r'Daily Ap Index', r'F10.7 Solar Radio Flux', r'Avg F10.7 Solar Radio Flux',
+                     r'Magnetic Local Time', r'Solar Local Time', r'Solar Zenith Angle',
+                     r'ap Geomagnetic Index', f'Multivariate ESNO Index', r'First MJO Index',
+                     r'Second MJO Index', r'Thermosphere Climate Index',
+                     r'Moon Phase', f'Lunar x Position', f'Lunar y Position', f'Lunar z Position']
+
+driver_units = [r'Index Value', r'Flux Value', r'Flux Value',
+                r'Hour', r'Hour', r'Degree',
+                r'Index Value', r'Index Value',
+                r'Index Value', r'Index Value',
+                r'Index Value', r'Degree', f'ECEF Position', f'ECEF Position', f'ECEF Position']
 
 # driving parameters that are cyclic, value is assumed equal to 0
 cyclic_driver = {
@@ -96,7 +108,6 @@ cyclic_driver = {
 n_driver = len(driver_names)
 
 driver_feat_names = []
-old_dr_feat_names = []
 for dn in driver_names:
     if dn in cyclic_driver:
         driver_feat_names.append('cos_' + dn)
@@ -106,7 +117,6 @@ for dn in driver_names:
 
 # temporarily have as many features as drivers/bvs
 n_driver_feat = len(driver_feat_names)
-n_dr_old_feat = len(old_dr_feat_names)
 n_bv_feat = n_bv
 n_hfp_feat = n_hfp
 n_lidar_bv_feat = n_lidar_bv
@@ -146,14 +156,14 @@ driver_mu = np.array(
     [1.94544, 4.56088, 4.56631, -0.05525,
      0.01809, -0.05894, 0.00226, 4.43704,
      1.82567, -0.23761, 0.02396, 0.00368,
-     25.10573, -0.04403, 0.01957, -4639.09700,
-     -3668.00494, 5219.77358])
+     25.10573, -0.04403, 0.01957, -20615.59992,
+     6914.52185, 1031.51040])
 driver_sigma = np.array(
     [0.68243, 0.26786, 0.25001, 0.70496,
      0.70686, 0.69716, 0.71449, 0.27556,
      0.85765, 0.96971, 1.01594, 0.99785,
-     0.58408, 0.70315, 0.70941, 263692.58536,
-     263581.02262, 98807.33446])
+     0.56443, 0.70315, 0.70941, 270407.64476,
+     273149.93455, 24525.017936])
 
 bv_thresholds = np.array(
     [[-1, 288214929284788.94],
@@ -175,12 +185,33 @@ lidar_thresholds = np.array(
      [-1, 0.9010207056999207],
      [-1, 0.0025]])
 
-assert((n_bv_feat, ) == bv_mu.shape)
-assert((n_bv_feat, ) == bv_sigma.shape)
-assert((n_lidar_bv_feat, ) == lidar_bv_mu.shape)
-assert((n_lidar_bv_feat, ) == lidar_bv_sigma.shape)
-assert((n_driver_feat,) == driver_mu.shape)
-assert((n_driver_feat,) == driver_sigma.shape)
-assert((n_bv, 2) == bv_thresholds.shape)
-assert((n_lidar_bv, 2) == lidar_thresholds.shape)
 
+hfp_mu = np.array(
+    [3.68874, 6.37635, 5.96192, 5.53278,
+     5.12021, -16.48782, 183.13432, 285.08089])
+hfp_sigma = np.array(
+    [0.38866, 0.92366, 1.14979, 0.93427,
+     1.12458, 119.12195, 13.99695, 30.87417])
+
+hfp_thresholds = np.array(
+    [[0, 250.0],
+     [0, 8000.0],
+     [-8000.0, 0.0],
+     [0.0, 4000.0],
+     [-4000.0, 0.0],
+     [-180.0, 180.0],
+     [175.0, 275.0],
+     [180.0, 325.0],
+     ])
+
+assert ((n_bv_feat,) == bv_mu.shape)
+assert ((n_bv_feat,) == bv_sigma.shape)
+assert ((n_hfp_feat,) == hfp_mu.shape)
+assert ((n_hfp_feat,) == hfp_sigma.shape)
+assert ((n_lidar_bv_feat,) == lidar_bv_mu.shape)
+assert ((n_lidar_bv_feat,) == lidar_bv_sigma.shape)
+assert ((n_driver_feat,) == driver_mu.shape)
+assert ((n_driver_feat,) == driver_sigma.shape)
+assert ((n_bv, 2) == bv_thresholds.shape)
+assert ((n_hfp, 2) == hfp_thresholds.shape)
+assert ((n_lidar_bv, 2) == lidar_thresholds.shape)
