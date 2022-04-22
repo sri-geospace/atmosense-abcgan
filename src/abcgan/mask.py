@@ -21,18 +21,14 @@ def prev_driver_mask(unix_time):
         Mask of valid driver samples that have a delayed sample
     """
 
-    # Determine time differences between each
-    # sample and the previous 6 samples
-    diff = np.zeros((len(unix_time), 6))
-    for i in range(6, len(unix_time)):
-        diff[i, :] = np.flip(unix_time[i] - unix_time[i - 6: i])
-
-    # Create mask of samples that have a previous sample equal to
-    # the specified delay time and a mapping vector to the
-    # current driver data structure
-    dr_mask = (diff == const.dr_delay).any(-1)
-    prev_dr_map = np.where(diff == const.dr_delay)[0] - \
-                  np.where(diff == const.dr_delay)[1]
+    dr_mask = np.zeros(len(unix_time), dtype=bool)
+    prev_dr_map = []
+    for i in range(len(unix_time)):
+        diff = np.where(unix_time[i] - unix_time == const.dr_delay)[0]
+        if len(diff) > 0:
+            dr_mask[i] = True
+            prev_dr_map.append(diff.item())
+    prev_dr_map = np.array(prev_dr_map)
 
     return prev_dr_map, dr_mask
 

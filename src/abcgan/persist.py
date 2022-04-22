@@ -9,7 +9,8 @@ To be persistable in this way the module must have a property
 containing a json serializable input dictionary as
 mdl.input_args
 """
-from abcgan import model
+from abcgan import bv_model
+from abcgan import hfp_model
 from abcgan import mean_estimation as me
 import json
 import torch
@@ -29,17 +30,20 @@ def fullname(inst):
 
 # list types of persistable object
 types = [
-    model.Generator,
-    model.Critic,
-    model.Driver_Generator,
-    model.Driver_Critic,
-    me.Transformer
+    bv_model.Generator,
+    bv_model.Critic,
+    bv_model.Driver_Generator,
+    bv_model.Driver_Critic,
+    me.Transformer,
+    hfp_model.HFP_Critic,
+    hfp_model.HFP_Generator,
+    hfp_model.HFP_Transformer
 ]
 # register types of objects that can be persisted
 type_dict = {fullname(t): t for t in types}
 
 
-def persist(generator, critic, name='wgan_gp', dir_path=dir_path):
+def persist(generator, critic, name='gan', dir_path=dir_path):
     """
     Persists abcgan generator and critic modules.
 
@@ -87,7 +91,7 @@ def persist(generator, critic, name='wgan_gp', dir_path=dir_path):
     torch.save(state_dict, name + '.pt')
 
 
-def recreate(name='wgan_gp', dir_path=dir_path):
+def recreate(name='gan', dir_path=dir_path):
     """
     Load a pre-trained generator and discriminator.
 

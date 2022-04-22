@@ -68,15 +68,58 @@ def decode(data, driver_names):
 
 
 def compute_valid(bvs, bv_thresholds=const.bv_thresholds):
+    """
+    Returns a mask which can be used to get rid of
+    invalid background variables samples and outliers
+
+    Parameters
+    --------------
+    bvs: np.ndarray
+        (n_samples x n_waves x n_hfp_feat)
+    bv_thresholds: np.ndarray:
+        Upper and lower bounds of each bv feature.
+    Returns
+    --------------
+    valid_mask: bool np.ndarray
+        (n_samples,)
+    """
     # valid only if value within thresholds and if at least one non-zero value
-    valid_mask = np.zeros((bvs.shape[0], bv_thresholds.shape[0]))
+    valid_mask = np.zeros((bvs.shape[0], bv_thresholds.shape[0])) > 0
     for i in range(bv_thresholds.shape[0]):
-        valid_mask[:, i] = ~(((bv_thresholds[i][0] > bvs[:, :, i]) |
+        valid_mask[:, i] = ~(((bvs[:, :, i] < bv_thresholds[i][0]) |
                              (bvs[:, :, i] > bv_thresholds[i][1])).any(-1) |
                              ((np.isnan(bvs[:, :, i])).all(-1)) |
                              (np.isnan(bvs[:, 0, i])))
     # valid only if every altitude is valid
     valid_mask = valid_mask.all(-1)
+    return valid_mask
+
+
+def compute_valid_hfp(hfps, hfp_thresholds=const.hfp_thresholds):
+    """
+    Returns a mask which can be used to get rid of
+    invalid hfp waves and outliers
+
+    Parameters
+    --------------
+    hfps: np.ndarray
+        (n_samples x n_waves x n_hfp_feat)
+    hfp_thresholds: np.ndarray:
+        Upper and lower bounds of each hfp feature.
+    Returns
+    --------------
+    valid_mask: bool np.ndarray
+        (n_samples,)
+    """
+
+    # valid only if value within thresholds
+    valid_mask = np.zeros((hfps.shape[0], hfp_thresholds.shape[0])) > 0
+
+    for i in range(hfps.shape[1]):
+        valid_mask[:, i] = ~(((hfps[:, :, i] < hfp_thresholds[i][0]) |
+                             (hfps[:, :, i] > hfp_thresholds[i][1])).any(-1))
+    # valid only if every altitude is valid
+    valid_mask = valid_mask.any(-1)
     return valid_mask
 
 
@@ -105,6 +148,53 @@ def scale_driver(drivers, driver_names=const.driver_names):
     driver_feat[:, log_idxs] = np.log(1 + driver_feat[:, log_idxs])
     driver_feat = (driver_feat - const.driver_mu[dr_idxs]) / const.driver_sigma[dr_idxs]
     return driver_feat
+
+
+def scale_hfp(hfps):
+    """
+    Return a scaled version of the hfps.
+
+    Parameters
+    --------------
+    hfps: np.ndarray
+        n_samples x n_waves x n_hfp
+
+    Returns
+    --------------
+    hfp_feat: np.ndarray
+        n_samples x n_waves x n_hfp_feat
+    """
+    # Don't compute valid mask if no bvs are available
+    if hfps.shape[1] > 0:
+        valid_mask = compute_valid_hfp(hfps)
+    else:
+        valid_mask = np.ones(hfps.shape[0], dtype=bool)
+
+    hfp_feat = hfps.copy()
+    hfp_feat[:, :, const.invert_hfp] *= -1
+    hfp_feat[:, :, const.log_hfp] = np.log(1 + hfp_feat[:, :, const.log_hfp])
+    hfp_feat = (hfp_feat - const.hfp_mu) / const.hfp_sigma
+    return hfp_feat, valid_mask
+
+
+def get_hfp(hfp_feat):
+    """
+    Invert featurization to recover hfp.
+
+    Parameters
+    --------------
+    hfp_feat: np.ndarray
+        n_samples x n_hfp_feat
+
+    Returns
+    --------------
+    hfps: np.ndarray
+        n_samples x n_hfp
+    """
+    hfps = const.hfp_sigma * hfp_feat + const.hfp_mu
+    hfps[:, :, const.log_hfp] = np.exp(hfps[:, :, const.log_hfp]) - 1.0
+    hfps[:, :, const.invert_hfp] *= -1
+    return hfps
 
 
 def scale_bv(bvs, bv_type='radar'):
