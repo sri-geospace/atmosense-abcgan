@@ -6,7 +6,7 @@ Currently the project supports the sampling of low frequency measurements condit
 
 [![Documentation Status](https://readthedocs.org/projects/atmosense-abcgan/badge/?version=latest)](https://atmosense-abcgan.readthedocs.io/en/latest/?badge=latest)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sri-geospace/atmosense-abcgan/HEAD?labpath=tutorials%2Fdemo.ipynb)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5889629.svg)](https://doi.org/10.5281/zenodo.5889629)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5889628.svg)](https://doi.org/10.5281/zenodo.5889628)
 
 ## Installing abcgan
 
