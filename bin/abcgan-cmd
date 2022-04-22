@@ -10,6 +10,9 @@
 #   2022-01-20  Todd Valentic
 #               Initial implementation
 #
+#   2022-04-22  Todd Valentic
+#               Fix repo url 
+#
 ##########################################################################
 
 import sys
@@ -46,9 +49,9 @@ def ProcessDownload(args):
 
     log(args, f'Downloading files from repo {args.repo}')
 
-    url = 'https://github.com/{args.repo}/archive/refs/heads/main.tar.gz'
+    url = f'https://github.com/{args.repo}/archive/refs/heads/main.tar.gz'
 
-    result = requests.get(URL, timeout=args.timeout) 
+    result = requests.get(url, timeout=args.timeout) 
 
     byte_stream = io.BytesIO(result.content)
     
@@ -83,8 +86,8 @@ if __name__ == '__main__':
     download_parser.add_argument('asset',choices=['tutorials','docs'])
 
     parser.add_argument('-r','--repo',dest='repo',
-                        default='sri-geospace/abcgan',
-                        help='Github repo (default sri-geospace/abcgan)')
+                        default='sri-geospace/atmosense-abcgan',
+                        help='Github repo (default sri-geospace/atmosense-abcgan)')
 
     parser.add_argument('-t','--timeout',dest='timeout',
                         default=5,type=int,metavar='SECS',

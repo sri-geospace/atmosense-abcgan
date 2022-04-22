@@ -347,7 +347,7 @@ def hellinger_scores_bv(real, fake, mask=None, bins=None, filter_length=None,
     """
     Returns the hellinger distance score that measures how similarity between
     real and generated background variable profiles.
-    ----------------
+
     real: np.ndarray
         tensor of real values for a particular alt and bv feat
     fake: np.ndarray
@@ -363,6 +363,7 @@ def hellinger_scores_bv(real, fake, mask=None, bins=None, filter_length=None,
         were used to calculate the hellinger distance metric.
     bv_type:
         type of data (radar or lidar)
+
     Returns
     -------------
     dist:
@@ -416,7 +417,7 @@ def hellinger_scores_hfp(real, fake, r_mask=None, f_mask=None,
     """
     Returns the hellinger distance score that measures the similarity between
     real and generated background variable profiles.
-    ----------------
+
     real:
         tensor of real values for a particular alt and bv feat
     fake:
@@ -430,6 +431,7 @@ def hellinger_scores_hfp(real, fake, r_mask=None, f_mask=None,
     return_hist_info: bool
         set to have function return the real hist,
         fake hist, and bin edges used in calculation
+
     Returns
     -------------
     dist:

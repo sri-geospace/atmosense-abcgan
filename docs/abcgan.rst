@@ -13,7 +13,7 @@ abcgan.constants module
    :show-inheritance:
 
 abcgan.anomaly module
------------------------
+----------------------
 
 .. automodule:: abcgan.anomaly
    :members:
@@ -53,7 +53,7 @@ abcgan.mean\_estimation module
    :show-inheritance:
 
 abcgan.bv\_model module
--------------------
+-----------------------
 
 .. automodule:: abcgan.bv_model
    :members:
@@ -61,7 +61,7 @@ abcgan.bv\_model module
    :show-inheritance:
 
 abcgan.hfp\_model module
------------------------
+------------------------
 
 .. automodule:: abcgan.hfp_model
    :members:
