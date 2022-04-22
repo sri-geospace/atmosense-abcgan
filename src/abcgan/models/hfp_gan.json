@@ -1,0 +1,47 @@
+{
+  "gen_trans_input": {
+    "d_dr": 18,
+    "d_bv": 12,
+    "n_alt": 30,
+    "d_hfp": 8,
+    "n_waves": 1,
+    "d_model": 128,
+    "output_b": true,
+    "nhead": 2,
+    "num_encoder_layers": 1,
+    "num_decoder_layers": 1,
+    "dim_feedforward": 512,
+    "dropout": 0.1,
+    "activation": "relu"
+  },
+  "gen_trans_type": "abcgan.hfp_model.HFP_Transformer",
+  "crit_trans_input": {
+    "d_dr": 18,
+    "d_bv": 12,
+    "n_alt": 30,
+    "d_hfp": 8,
+    "n_waves": 1,
+    "d_model": 128,
+    "output_b": false,
+    "nhead": 2,
+    "num_encoder_layers": 1,
+    "num_decoder_layers": 1,
+    "dim_feedforward": 512,
+    "dropout": 0.1,
+    "activation": "relu"
+  },
+  "crit_trans_type": "abcgan.hfp_model.HFP_Transformer",
+  "gen_input": {
+    "n_layers": 2,
+    "latent_dim": 16,
+    "img_dim": 8,
+    "hidden_dim": 128
+  },
+  "gen_type": "abcgan.hfp_model.HFP_Generator",
+  "crit_input": {
+    "n_layers": 2,
+    "img_dim": 8,
+    "hidden_dim": 128
+  },
+  "crit_type": "abcgan.hfp_model.HFP_Critic"
+}

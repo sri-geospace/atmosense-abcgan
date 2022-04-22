@@ -12,6 +12,22 @@ abcgan.constants module
    :undoc-members:
    :show-inheritance:
 
+abcgan.anomaly module
+-----------------------
+
+.. automodule:: abcgan.anomaly
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+abcgan.attention module
+-----------------------
+
+.. automodule:: abcgan.attention
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 abcgan.interface module
 -----------------------
 
@@ -36,10 +52,18 @@ abcgan.mean\_estimation module
    :undoc-members:
    :show-inheritance:
 
-abcgan.model module
+abcgan.bv\_model module
 -------------------
 
-.. automodule:: abcgan.model
+.. automodule:: abcgan.bv_model
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+abcgan.hfp\_model module
+-----------------------
+
+.. automodule:: abcgan.hfp_model
    :members:
    :undoc-members:
    :show-inheritance:
