@@ -1,0 +1,55 @@
+{
+  "gen_input": {
+    "n_layers": 2,
+    "latent_dim": 16,
+    "cond_dim": 32,
+    "feat_dim": 18,
+    "hidden_dim": 512
+  },
+  "gen_type": "abcgan.tec_model.WTEC_Generator",
+  "crit_input": {
+    "n_layers": 2,
+    "feat_dim": 18,
+    "cond_dim": 32,
+    "hidden_dim": 512
+  },
+  "crit_type": "abcgan.tec_model.WTEC_Critic",
+  "train_conf": {
+    "epochs": 500,
+    "gen_max_lr": 0.0008,
+    "crit_max_lr": 0.0008,
+    "batch_size": 2000,
+    "c_lamda": 5,
+    "pct_start": 0.3,
+    "weight_decay": 0.001,
+    "crit_repeat": 5,
+    "driver_deltas": null,
+    "wtec_deltas": [
+      0.05,
+      0.05,
+      0.05,
+      0.1,
+      0.1,
+      0.1,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05
+    ],
+    "ds_name": "LSTIDs_Poker",
+    "ds_full_name": "LSTIDs_3600-7200sec_Poker",
+    "location": "Poker",
+    "version": "v05.00",
+    "train_fname": "/b0/saustin/atmosense/tec/v05.00/LSTIDs_3600-7200sec_Poker/train.h5",
+    "val_fname": "/b0/saustin/atmosense/tec/v05.00/LSTIDs_3600-7200sec_Poker/validation.h5",
+    "model_type": "mm_gan"
+  }
+}
