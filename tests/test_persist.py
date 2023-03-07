@@ -3,6 +3,7 @@ import os
 from abcgan import persist
 from abcgan import bv_model
 from abcgan import hfp_model
+from abcgan import tec_model
 import abcgan.mean_estimation as me
 import abcgan.constants as const
 import torch
@@ -33,10 +34,16 @@ def hfp_modules():
     crit = hfp_model.HFP_Critic(tcrit)
     return gen, crit
 
+
+def wtec_modules():
+    gen = tec_model.WTEC_Generator()
+    crit = tec_model.WTEC_Critic()
+    return gen, crit
+
 # generate fake inputs
 
 
-def test_modules(gen, crit):
+def get_test_modules(gen, crit):
     n_batch = 10
     n_alt = const.max_alt
     n_bv_feat = const.n_bv_feat
@@ -52,7 +59,7 @@ def test_modules(gen, crit):
     return gen_valid, crit_valid
 
 
-def test_hfp_modules(gen, crit):
+def get_test_hfp_modules(gen, crit):
     n_batch = 10
     n_alt = const.max_alt
     n_bv_feat = const.n_bv_feat
@@ -70,6 +77,18 @@ def test_hfp_modules(gen, crit):
     return gen_valid, crit_valid
 
 
+def get_tec_test_modules(gen, crit):
+    n_batch = 10
+    driver_src = torch.zeros(n_batch, const.n_wtec_dr_feat)
+    tec_src = torch.zeros(n_batch, const.n_wtec_feat)
+
+    gen_output = gen(driver_src)
+    gen_valid = not gen_output.isnan().any().item()
+    crit_output = crit(driver_src, tec_src)
+    crit_valid = not crit_output.isnan().any().item()
+    return gen_valid, crit_valid
+
+
 class Persist(unittest.TestCase):
 
     def test_persist(self):
@@ -82,6 +101,17 @@ class Persist(unittest.TestCase):
         self.assertTrue(os.path.exists(param_file))
         self.assertTrue(os.path.exists(info_file))
 
+
+    def test_recreate(self):
+        if not os.path.exists(param_file):
+            gen_in, crit_in = gen_modules()
+            persist.persist(gen_in, crit_in, fname, dir_path)
+        gen, crit = persist.recreate(fname, dir_path)
+        # test that loaded modules are working
+        gen_valid, crit_valid = get_test_modules(gen, crit)
+        self.assertTrue(gen_valid)
+        self.assertTrue(crit_valid)
+
     def test_hfp_persist(self):
         if os.path.exists(param_file):
             os.remove(param_file)
@@ -92,23 +122,33 @@ class Persist(unittest.TestCase):
         self.assertTrue(os.path.exists(param_file))
         self.assertTrue(os.path.exists(info_file))
 
-    def test_recreate(self):
-        if not os.path.exists(param_file):
-            gen_in, crit_in = gen_modules()
-            persist.persist(gen_in, crit_in, fname, dir_path)
-        gen, crit = persist.recreate(fname, dir_path)
-        # test that loaded modules are working
-        gen_valid, crit_valid = test_modules(gen, crit)
-        self.assertTrue(gen_valid)
-        self.assertTrue(crit_valid)
-
     def test_hfp_recreate(self):
         if not os.path.exists(param_file):
             gen_in, crit_in = hfp_modules()
             persist.persist(gen_in, crit_in, fname, dir_path)
         gen, crit = persist.recreate(fname, dir_path)
         # test that loaded modules are working
-        gen_valid, crit_valid = test_hfp_modules(gen, crit)
+        gen_valid, crit_valid = get_test_hfp_modules(gen, crit)
+        self.assertTrue(gen_valid)
+        self.assertTrue(crit_valid)
+
+    def test_wtec_persist(self):
+        if os.path.exists(param_file):
+            os.remove(param_file)
+        if os.path.exists(info_file):
+            os.remove(info_file)
+        gen, crit = wtec_modules()
+        persist.persist(gen, crit, fname, dir_path)
+        self.assertTrue(os.path.exists(param_file))
+        self.assertTrue(os.path.exists(info_file))
+
+    def test_wtec_recreate(self):
+        if not os.path.exists(param_file):
+            gen_in, crit_in = wtec_modules()
+            persist.persist(gen_in, crit_in, fname, dir_path)
+        gen, crit = persist.recreate(fname, dir_path)
+        # test that loaded modules are working
+        gen_valid, crit_valid = get_tec_test_modules(gen, crit)
         self.assertTrue(gen_valid)
         self.assertTrue(crit_valid)
 
