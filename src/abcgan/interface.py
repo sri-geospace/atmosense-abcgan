@@ -646,6 +646,8 @@ def hellinger_scores_bv(real: np.ndarray,
     """
     Returns the hellinger distance score that measures how similarity between
     real and generated background variable profiles.
+
+    Parameters
     ----------------
     real: np.ndarray
         tensor of real values for a particular alt and bv feat
@@ -740,6 +742,8 @@ def hellinger_scores_hfp(real: np.ndarray,
     """
     Returns the hellinger distance score that measures the similarity between
     real and generated background variable profiles.
+
+    Parameters
     ----------------
     real:
         tensor of real values for a particular alt and bv feat
@@ -832,6 +836,8 @@ def hellinger_scores_wtec(real: np.ndarray,
     """
     Returns the hellinger distance score that measures the similarity between
     real and generated tec wave.
+
+    Parameters
     ----------------
     real:
         array of real tec waves
