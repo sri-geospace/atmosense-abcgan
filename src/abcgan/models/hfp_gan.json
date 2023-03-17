@@ -1,6 +1,6 @@
 {
   "gen_trans_input": {
-    "d_dr": 18,
+    "d_dr": 32,
     "d_bv": 12,
     "n_alt": 30,
     "d_hfp": 8,
@@ -16,7 +16,7 @@
   },
   "gen_trans_type": "abcgan.hfp_model.HFP_Transformer",
   "crit_trans_input": {
-    "d_dr": 18,
+    "d_dr": 32,
     "d_bv": 12,
     "n_alt": 30,
     "d_hfp": 8,

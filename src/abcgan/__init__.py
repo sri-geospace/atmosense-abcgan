@@ -1,5 +1,4 @@
 __all__ = [
-    "generate",
     "discriminate",
     "driver_names",
     "bv_names",
@@ -9,6 +8,6 @@ __all__ = [
     "estimate_drivers",
 ]
 
-from .interface import generate, discriminate, estimate_drivers,\
+from .interface import discriminate, estimate_drivers,\
     stack_bvs, stack_drivers
 from .constants import driver_names, bv_names, max_alt

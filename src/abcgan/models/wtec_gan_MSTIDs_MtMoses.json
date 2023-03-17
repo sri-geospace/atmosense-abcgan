@@ -1,0 +1,55 @@
+{
+  "gen_input": {
+    "n_layers": 3,
+    "latent_dim": 16,
+    "cond_dim": 32,
+    "feat_dim": 18,
+    "hidden_dim": 1024
+  },
+  "gen_type": "abcgan.tec_model.WTEC_Generator",
+  "crit_input": {
+    "n_layers": 3,
+    "feat_dim": 18,
+    "cond_dim": 32,
+    "hidden_dim": 1024
+  },
+  "crit_type": "abcgan.tec_model.WTEC_Critic",
+  "train_conf": {
+    "epochs": 1000,
+    "gen_max_lr": 0.0008,
+    "crit_max_lr": 0.0008,
+    "batch_size": 2000,
+    "c_lamda": 5,
+    "pct_start": 0.3,
+    "weight_decay": 0.001,
+    "crit_repeat": 5,
+    "driver_deltas": null,
+    "wtec_deltas": [
+      0.05,
+      0.05,
+      0.05,
+      0.1,
+      0.1,
+      0.1,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05
+    ],
+    "ds_name": "MSTIDs_MtMoses",
+    "ds_full_name": "MSTIDs_600-3600sec_MtMoses",
+    "location": "MtMoses",
+    "version": "v05.00",
+    "train_fname": "/b0/saustin/atmosense/tec/v05.00/MSTIDs_600-3600sec_MtMoses/train.h5",
+    "val_fname": "/b0/saustin/atmosense/tec/v05.00/MSTIDs_600-3600sec_MtMoses/validation.h5",
+    "model_type": "mm_gan"
+  }
+}

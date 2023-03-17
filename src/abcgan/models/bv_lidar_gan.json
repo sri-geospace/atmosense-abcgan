@@ -1,6 +1,6 @@
 {
   "gen_trans_input": {
-    "d_dr": 18,
+    "d_dr": 32,
     "d_bv": 4,
     "n_alt": 20,
     "d_model": 128,
@@ -12,7 +12,7 @@
   },
   "gen_trans_type": "abcgan.mean_estimation.Transformer",
   "crit_trans_input": {
-    "d_dr": 18,
+    "d_dr": 32,
     "d_bv": 4,
     "n_alt": 20,
     "d_model": 128,

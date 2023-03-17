@@ -5,6 +5,30 @@ Uses numpy only (no pytorch)
 """
 import numpy as np  # noqa
 import abcgan.constants as const
+from typing import Union
+
+
+def encoded_driver_names(dr_names: list = const.driver_names):
+    """
+    Gets list of driver feature names in order of
+    Parameters
+    ----------
+    dr_names : list
+        array of driver names.
+
+    Returns
+    -------
+    driver_feat_names : list
+        list of driver feature names
+    """
+    driver_feat_names = []
+    for dn in dr_names:
+        if dn in const.cyclic_driver:
+            driver_feat_names.append('cos_' + dn)
+            driver_feat_names.append('sin_' + dn)
+        else:
+            driver_feat_names.append(dn)
+    return driver_feat_names
 
 
 def encode(data, name):
@@ -123,7 +147,37 @@ def compute_valid_hfp(hfps, hfp_thresholds=const.hfp_thresholds):
     return valid_mask
 
 
-def scale_driver(drivers, driver_names=const.driver_names):
+def compute_valid_wtec(wtec: np.ndarray,
+                       wtec_thresholds: np.ndarray = const.wtec_thresholds):
+    """
+    Returns a mask which can be used to get rid of
+    invalid tec waves and outliers
+
+    Parameters
+    --------------
+    wtec: np.ndarray
+        (n_samples x n_waves x n_wtec)
+    wtec_thresholds: np.ndarray:
+        Upper and lower bounds of each wtec variable.
+    Returns
+    --------------
+    valid_mask: bool np.ndarray
+        (n_samples,)
+    """
+
+    # valid only if value within thresholds
+    valid_mask = np.zeros((wtec.shape[0], wtec.shape[1])) > 0
+
+    for i in range(wtec.shape[1]):
+        valid_mask[:, i] = ~(((wtec[..., i] < wtec_thresholds[i, 0]) |
+                             (wtec[..., i] > wtec_thresholds[i, 1])).any(-1))
+    # valid only if every altitude is valid
+    valid_mask = valid_mask.any(-1)
+    return valid_mask
+
+
+def scale_driver(drivers: np.ndarray,
+                 driver_names: list = const.driver_names):
     """
     Return a scaled version of the drivers.
 
@@ -143,11 +197,36 @@ def scale_driver(drivers, driver_names=const.driver_names):
         for i, n in enumerate(driver_names[:drivers.shape[1]])
     ])
     dr_idxs = np.hstack([const.dr_feat_map[name] for name in driver_names])
-    log_idxs = [i for (i, d) in enumerate(dr_idxs) if d in const.log_drs]
+    log_idxs = [i for (i, d) in enumerate(dr_idxs) if const.driver_feat_names[d] in const.log_driver_feats]
 
     driver_feat[:, log_idxs] = np.log(1 + driver_feat[:, log_idxs])
     driver_feat = (driver_feat - const.driver_mu[dr_idxs]) / const.driver_sigma[dr_idxs]
     return driver_feat
+
+
+
+def get_driver(driver_feat, driver_names=const.driver_names):
+    """
+    Invert featurization to recover driving parameters.
+
+    Parameters
+    --------------
+    driver_feat: np.ndarray
+        n_samples x n_driver_feat
+    driver_names: list: str
+        list driver names in driver_feat
+    Returns
+    --------------
+    original driver: np.ndarray
+        n_samples x n_driver
+    """
+    dr_idxs = np.hstack([const.dr_feat_map[name] for name in driver_names])
+    log_idxs = [i for (i, d) in enumerate(dr_idxs) if const.driver_feat_names[d] in const.log_driver_feats]
+
+    drivers = const.driver_sigma[dr_idxs] * driver_feat + const.driver_mu[dr_idxs]
+    drivers[:, log_idxs] = np.exp(drivers[:, log_idxs]) - 1.0
+    drivers = decode(drivers, driver_names)
+    return drivers
 
 
 def scale_hfp(hfps):
@@ -247,30 +326,6 @@ def scale_bv(bvs, bv_type='radar'):
     return bv_feat, valid_mask
 
 
-def get_driver(driver_feat, driver_names=const.driver_names):
-    """
-    Invert featurization to recover driving parameters.
-
-    Parameters
-    --------------
-    driver_feat: np.ndarray
-        n_samples x n_driver_feat
-    driver_names: list: str
-        list driver names in driver_feat
-    Returns
-    --------------
-    original driver: np.ndarray
-        n_samples x n_driver
-    """
-    dr_idxs = np.hstack([const.dr_feat_map[name] for name in driver_names])
-    log_idxs = [i for (i, d) in enumerate(dr_idxs) if d in const.log_drs]
-
-    drivers = const.driver_sigma[dr_idxs] * driver_feat + const.driver_mu[dr_idxs]
-    drivers[:, log_idxs] = np.exp(drivers[:, log_idxs]) - 1.0
-    drivers = decode(drivers, driver_names)
-    return drivers
-
-
 def get_bv(bv_feat, bv_type='radar'):
     """
     Invert featurization to recover bvs.
@@ -294,3 +349,75 @@ def get_bv(bv_feat, bv_type='radar'):
         bvs = const.bv_sigma * bv_feat + const.bv_mu
         bvs[:, :, const.log_bvs] = np.exp(bvs[:, :, const.log_bvs]) - 1.0
     return bvs
+
+
+def scale_wtec(wtec: np.ndarray,
+               dataset_name: Union[None, str] = const.wtec_default_dataset):
+    """
+    Return a scaled version of the tec waves.
+
+    Parameters
+    --------------
+    wtec: np.ndarray
+        n_samples x n_wtec_waves x n_wtec
+    dataset_name: str
+        specify dataset type for z-scaling
+
+    Returns
+    --------------
+    wtec_feat: np.ndarray
+        n_samples x n_wtec_waves x n_wtec_feat
+    valid_mask: np.ndarray
+        n_samples x 1
+    """
+    # Don't compute valid mask if no bvs are available
+    if wtec.shape[1] > 0:
+        valid_mask = compute_valid_wtec(wtec)
+    else:
+        valid_mask = np.ones(wtec.shape[0], dtype=bool)
+
+    wtec_feat = wtec.copy()
+    wtec_feat[:, const.log_wtec] = np.log(1 + wtec_feat[:, const.log_wtec])
+
+    if dataset_name is None:
+        mu = const.wtec_zscale_dict[const.wtec_default_dataset]['mu']
+        std = const.wtec_zscale_dict[const.wtec_default_dataset]['sigma']
+    elif dataset_name in const.wtec_datasets_names:
+        mu = const.wtec_zscale_dict[dataset_name]['mu']
+        std = const.wtec_zscale_dict[dataset_name]['sigma']
+    else:
+        raise ValueError(f"{dataset_name} is invalid. Plz choose from: {const.wtec_datasets_names}")
+
+    wtec_feat = (wtec_feat - mu) / std
+    return wtec_feat, valid_mask
+
+
+def get_wtec(wtec_feat: np.ndarray,
+             dataset_name: Union[None, str] = const.wtec_default_dataset):
+    """
+    Invert featurization to recover tec waves.
+
+    Parameters
+    --------------
+    wtec_feat: np.ndarray
+        n_samples x n_wtec_feat
+    dataset_name: str
+        specify dataset type for z-scaling
+
+    Returns
+    --------------
+    wtec: np.ndarray
+        n_samples x n_wtec
+    """
+    if dataset_name is None:
+        mu = const.wtec_zscale_dict[const.wtec_default_dataset]['mu']
+        std = const.wtec_zscale_dict[const.wtec_default_dataset]['sigma']
+    elif dataset_name in const.wtec_datasets_names:
+        mu = const.wtec_zscale_dict[dataset_name]['mu']
+        std = const.wtec_zscale_dict[dataset_name]['sigma']
+    else:
+        raise ValueError(f"{dataset_name} is invalid. Plz choose from: {const.wtec_datasets_names}")
+
+    wtec = std * wtec_feat + mu
+    wtec[:, const.log_wtec] = np.exp(wtec[:, const.log_wtec]) - 1.0
+    return wtec
