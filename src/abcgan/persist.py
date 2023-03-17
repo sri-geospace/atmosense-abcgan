@@ -11,6 +11,7 @@ mdl.input_args
 """
 from abcgan import bv_model
 from abcgan import hfp_model
+from abcgan import tec_model
 from abcgan import mean_estimation as me
 import json
 import torch
@@ -37,13 +38,15 @@ types = [
     me.Transformer,
     hfp_model.HFP_Critic,
     hfp_model.HFP_Generator,
-    hfp_model.HFP_Transformer
+    hfp_model.HFP_Transformer,
+    tec_model.WTEC_Generator,
+    tec_model.WTEC_Critic
 ]
 # register types of objects that can be persisted
 type_dict = {fullname(t): t for t in types}
 
 
-def persist(generator, critic, name='gan', dir_path=dir_path):
+def persist(generator, critic, name='gan', dir_path=dir_path, train_conf=None):
     """
     Persists abcgan generator and critic modules.
 
@@ -59,6 +62,8 @@ def persist(generator, critic, name='gan', dir_path=dir_path):
         dir_path: str, optional
             default is the models directory. None assumes
             file is in local directory.
+        train_conf: dict, optional
+            default is None. dictionary of training parameters used
 
     The generator, critic and any transformers passed in as
     arguments to these must be registered in persist.py and must
@@ -83,6 +88,8 @@ def persist(generator, critic, name='gan', dir_path=dir_path):
         if k.endswith('type'):
             if v not in type_dict:
                 raise ValueError(f"Uknown module type {v}.")
+    if train_conf is not None:
+        jdict["train_conf"] = train_conf
     with open(name+'.json', 'w+') as f:
         json.dump(jdict, f, indent=2)
     state_dict = {}

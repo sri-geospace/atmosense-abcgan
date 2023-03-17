@@ -9,6 +9,8 @@ def get_encoder_attn(layers, src, src_mask, src_key_mask):
     """
     Collects attention masks from each encoder layer in the transformer
 
+    Parameters
+    -------------
     layers: list
         list of pytorch encoder layers from transformer
     src: torch.tensor

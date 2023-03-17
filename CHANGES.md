@@ -11,4 +11,7 @@
 - Documentation updates
 - Fix download URL in abcgan-cmd
 
+## 3.0.0
+- Add TEC GAN and models
+- Update tutorials
 

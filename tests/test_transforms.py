@@ -23,7 +23,48 @@ def fake_hfp(n):
     return hfp
 
 
+def fake_wtec(n, ds=const.wtec_default_dataset):
+    wtec = np.zeros((n, const.n_wtec))
+    for i in range(const.n_wtec):
+        wtec[:, i] = np.random.uniform(low=const.wtec_zscale_dict[ds]['meas_ranges'][i, 0],
+                                       high=const.wtec_zscale_dict[ds]['meas_ranges'][i, 1],
+                                       size=n)
+    return wtec
+
+
 class TestTransforms(unittest.TestCase):
+
+    def test_scale_wtec_LSTID(self):
+        batch_size = 10
+        dataset_name = 'LSTIDs_Poker'
+        wtec = fake_wtec(batch_size, ds=dataset_name)
+        wtec_feat, valid_mask = trans.scale_wtec(wtec, dataset_name=dataset_name)
+        self.assertEqual(wtec_feat.shape, (wtec.shape[0], const.n_wtec_feat))
+        self.assertEqual(valid_mask.shape, (batch_size,))
+
+    def test_get_wtec_LSTID(self):
+        dataset_name = 'LSTIDs_Poker'
+        wtec = fake_wtec(10, ds=dataset_name)
+        wtec_feat, valid_mask = trans.scale_wtec(wtec, dataset_name=dataset_name)
+        new_wtec = trans.get_wtec(wtec_feat, dataset_name=dataset_name)
+        self.assertEqual(new_wtec.shape, wtec.shape)
+        self.assertTrue(np.allclose(wtec, new_wtec, equal_nan=True))
+
+    def test_scale_wtec_MSTID(self):
+        batch_size = 10
+        dataset_name = 'MSTIDs_Poker'
+        wtec = fake_wtec(batch_size, ds=dataset_name)
+        wtec_feat, valid_mask = trans.scale_wtec(wtec, dataset_name=dataset_name)
+        self.assertEqual(wtec_feat.shape, (wtec.shape[0], const.n_wtec_feat))
+        self.assertEqual(valid_mask.shape, (batch_size,))
+
+    def test_get_wtec_MSTID(self):
+        dataset_name = 'MSTIDs_Poker'
+        wtec = fake_wtec(10, ds=dataset_name)
+        wtec_feat, valid_mask = trans.scale_wtec(wtec, dataset_name=dataset_name)
+        new_wtec = trans.get_wtec(wtec_feat, dataset_name=dataset_name)
+        self.assertEqual(new_wtec.shape, wtec.shape)
+        self.assertTrue(np.allclose(wtec, new_wtec, equal_nan=True))
 
     def test_scale_driver(self):
         drivers = fake_drivers(10)
