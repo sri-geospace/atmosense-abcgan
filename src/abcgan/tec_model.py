@@ -21,11 +21,11 @@ class WTEC_Generator(nn.Module):
     """
 
     def __init__(self,
-                 n_layers=2,
-                 latent_dim=16,
-                 feat_dim=const.n_wtec_feat,
-                 cond_dim=const.n_wtec_dr_feat,
-                 hidden_dim=64):
+                 n_layers: int = 2,
+                 latent_dim: int = 16,
+                 feat_dim: int = const.n_wtec,
+                 cond_dim: int = const.n_wtec_dr_feat,
+                 hidden_dim: int = 64):
         super(WTEC_Generator, self).__init__()
 
         input_dim = cond_dim + latent_dim
@@ -101,10 +101,10 @@ class WTEC_Critic(nn.Module):
     """
 
     def __init__(self,
-                 n_layers=2,
-                 feat_dim=const.n_wtec_feat,
-                 cond_dim=const.n_wtec_dr_feat,
-                 hidden_dim=64):
+                 n_layers: int = 2,
+                 feat_dim: int = const.n_wtec,
+                 cond_dim: int = const.n_wtec_dr_feat,
+                 hidden_dim: int = 64):
         super(WTEC_Critic, self).__init__()
 
         input_dim = cond_dim + 1 * feat_dim

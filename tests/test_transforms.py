@@ -4,8 +4,8 @@ from abcgan import transforms as trans
 import numpy as np
 
 
-def fake_drivers(n):
-    return np.exp(np.random.normal(size=(n, const.n_driver)))
+def fake_drivers(n, n_drivers=const.n_driver):
+    return np.exp(np.random.normal(size=(n, n_drivers)))
 
 
 def fake_bvs(n):
@@ -23,54 +23,44 @@ def fake_hfp(n):
     return hfp
 
 
-def fake_wtec(n, ds=const.wtec_default_dataset):
+def fake_wtec(n, tid_type):
     wtec = np.zeros((n, const.n_wtec))
     for i in range(const.n_wtec):
-        wtec[:, i] = np.random.uniform(low=const.wtec_zscale_dict[ds]['meas_ranges'][i, 0],
-                                       high=const.wtec_zscale_dict[ds]['meas_ranges'][i, 1],
+        wtec[:, i] = np.random.uniform(low=const.wtec_dict[tid_type]['meas_ranges'][i, 0],
+                                       high=const.wtec_dict[tid_type]['meas_ranges'][i, 1],
                                        size=n)
     return wtec
 
 
 class TestTransforms(unittest.TestCase):
 
-    def test_scale_wtec_LSTID(self):
+    def test_scale_wtec(self):
         batch_size = 10
-        dataset_name = 'LSTIDs_Poker'
-        wtec = fake_wtec(batch_size, ds=dataset_name)
-        wtec_feat, valid_mask = trans.scale_wtec(wtec, dataset_name=dataset_name)
-        self.assertEqual(wtec_feat.shape, (wtec.shape[0], const.n_wtec_feat))
-        self.assertEqual(valid_mask.shape, (batch_size,))
+        for tid_type in list(const.wtec_dict.keys()):
+            wtec = fake_wtec(batch_size, tid_type=tid_type)
+            wtec_feat, valid_mask = trans.scale_wtec(wtec, tid_type=tid_type)
+            self.assertEqual(wtec_feat.shape, (wtec.shape[0], const.n_wtec))
+            self.assertEqual(valid_mask.shape, (batch_size,))
 
-    def test_get_wtec_LSTID(self):
-        dataset_name = 'LSTIDs_Poker'
-        wtec = fake_wtec(10, ds=dataset_name)
-        wtec_feat, valid_mask = trans.scale_wtec(wtec, dataset_name=dataset_name)
-        new_wtec = trans.get_wtec(wtec_feat, dataset_name=dataset_name)
-        self.assertEqual(new_wtec.shape, wtec.shape)
-        self.assertTrue(np.allclose(wtec, new_wtec, equal_nan=True))
-
-    def test_scale_wtec_MSTID(self):
-        batch_size = 10
-        dataset_name = 'MSTIDs_Poker'
-        wtec = fake_wtec(batch_size, ds=dataset_name)
-        wtec_feat, valid_mask = trans.scale_wtec(wtec, dataset_name=dataset_name)
-        self.assertEqual(wtec_feat.shape, (wtec.shape[0], const.n_wtec_feat))
-        self.assertEqual(valid_mask.shape, (batch_size,))
-
-    def test_get_wtec_MSTID(self):
-        dataset_name = 'MSTIDs_Poker'
-        wtec = fake_wtec(10, ds=dataset_name)
-        wtec_feat, valid_mask = trans.scale_wtec(wtec, dataset_name=dataset_name)
-        new_wtec = trans.get_wtec(wtec_feat, dataset_name=dataset_name)
-        self.assertEqual(new_wtec.shape, wtec.shape)
-        self.assertTrue(np.allclose(wtec, new_wtec, equal_nan=True))
+    def test_get_wtec(self):
+        for tid_type in list(const.wtec_dict.keys()):
+            wtec = fake_wtec(10, tid_type=tid_type)
+            wtec_feat, valid_mask = trans.scale_wtec(wtec, tid_type=tid_type)
+            new_wtec = trans.get_wtec(wtec_feat, tid_type=tid_type)
+            self.assertEqual(new_wtec.shape, wtec.shape)
+            self.assertTrue(np.allclose(wtec, new_wtec, equal_nan=True))
 
     def test_scale_driver(self):
         drivers = fake_drivers(10)
         driver_feat = trans.scale_driver(drivers)
         self.assertEqual(driver_feat.shape,
                          (drivers.shape[0], const.n_driver_feat))
+
+    def test_scale_wtec_driver(self):
+        drivers = fake_drivers(10, const.n_wtec_dr)
+        driver_feat = trans.scale_driver(drivers, data_type='wtec')
+        self.assertEqual(driver_feat.shape,
+                         (drivers.shape[0], const.n_wtec_dr_feat))
 
     def test_scale_bv(self):
         batch_size = 10
@@ -93,6 +83,13 @@ class TestTransforms(unittest.TestCase):
         drivers = fake_drivers(10)
         driver_feat = trans.scale_driver(drivers)
         new_drivers = trans.get_driver(driver_feat)
+        self.assertEqual(drivers.shape, new_drivers.shape)
+        self.assertTrue(np.allclose(drivers, new_drivers))
+
+    def test_get_wtec_driver(self):
+        drivers = fake_drivers(10, const.n_wtec_dr)
+        driver_feat = trans.scale_driver(drivers, data_type='wtec')
+        new_drivers = trans.get_driver(driver_feat, data_type='wtec')
         self.assertEqual(drivers.shape, new_drivers.shape)
         self.assertTrue(np.allclose(drivers, new_drivers))
 

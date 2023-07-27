@@ -4,26 +4,32 @@ Code for top level interface.
 This code is added to the main package level in __init__.py
 """
 import numpy as np
-import abcgan.constants as const
-import abcgan.transforms as trans
-from abcgan import persist
-from abcgan.mask import mask_altitude
-from abcgan.transforms import compute_valid, compute_valid_hfp, compute_valid_wtec
+import os
+import glob
 import torch
 import h5py
 from tqdm import tqdm
 from warnings import warn
 from typing import List, Union, Tuple
-from torch.utils.data import TensorDataset, DataLoader
+
+import abcgan.constants as const
+import abcgan.transforms as trans
+from abcgan import persist
+from abcgan.persist import dir_path as default_model_dir
+from abcgan.mask import mask_altitude, context_mapping
+from abcgan.transforms import compute_valid, compute_valid_hfp
 
 
 def generate_wtec(drivers,
-                  driver_names: list = const.driver_names,
+                  driver_names: list = const.wtec_dr_names,
                   mean_replace_drs: Union[None, List[str]] = None,
-                  wtec_model: str = const.wtec_default_model,
-                  dataset_name: Union[None, str] = None,
+                  ctx_wtecs: Union[np.ndarray, None] = None,
+                  tid_type: str = const.wtec_default_tid_type,
+                  location: str = const.wtec_default_location,
+                  model_name: Union[None, str] = None,
                   model_dir: Union[None, str] = None,
                   return_z_scale: bool = False,
+                  batch_size: Union[int, None] = None,
                   cuda_index: Union[None, int] = None,
                   verbose: int = 1):
     """
@@ -38,14 +44,20 @@ def generate_wtec(drivers,
         list of names of driving parameters
     mean_replace_drs: list
         list of driver that will set to its average, i.e. z-scaled value of zero
+    ctx_wtecs: np.ndarray. optional
+        the wtec context samples to use when conditioning the GAN
     return_z_scale: bool, optional
         set to have the function return z scaled feature data
-    wtec_model: str, optional
-        name of WTEC GAN to use
-    dataset_name: str
+    tid_type: str
         specify dataset type for z-scaling
+    location: str
+        specify the location of the trained model
+    model_name: str, optional
+        name of WTEC GAN to use
     model_dir: str, optional
         directory to load model from
+    batch_size: int, optional
+        batch size to use
     cuda_index: int, optional
         GPU index to use when generating BVs and HFPs
     verbose: bool, optional
@@ -55,6 +67,26 @@ def generate_wtec(drivers,
     samples: np.ndarray
         1) n_samples x n_wtec output measurements
     """
+    if model_dir is None:
+        model_dir = default_model_dir
+
+    if tid_type not in const.wtec_dict.keys():
+        raise ValueError(f"{tid_type} is an invalid tid. Please use one of the following: "
+                         f"{list(const.wtec_dict.keys())}")
+    if f'{tid_type}_{location}' not in const.wtec_dataset_names:
+        raise ValueError(f"{tid_type} at {location} is an invalid model. "
+                         f"Please use one of the following combinations: "
+                         f"{const.wtec_dataset_names}")
+
+    if model_name is None:
+        dataset_name = f'{tid_type}_{location}'
+        model_name = f'wtec_gan_{dataset_name}' if ctx_wtecs is None else f'wtec_cgan_{dataset_name}'
+
+    if model_dir is None and not os.path.exists(os.path.join(default_model_dir, f'{model_name}.pt')):
+        raise ValueError(f"cannot find {model_name} model. Please use one of the following: "
+                         f"{[os.path.basename(f)[:-3] for f in glob.glob(f'{default_model_dir}/wtec*.pt')]}")
+    if model_dir is not None and not os.path.exists(os.path.join(model_dir, f'{model_name}.pt')):
+        raise ValueError(f"cannot find {model_name} model in the following directory: {model_dir}")
 
     with torch.no_grad():
         disable1 = bool(verbose < 1)
@@ -64,24 +96,39 @@ def generate_wtec(drivers,
             raise ValueError(f"driver and driver_names must have the "
                              f"same length ({drivers.shape[-1]} != {len(driver_names)}")
 
+        # z scale wtec context if provided
+        if ctx_wtecs is not None:
+            n_context = ctx_wtecs.shape[-1] // const.n_wtec
+            wtec_ctx_feat = ctx_wtecs.copy()
+            for i in range(n_context):
+                wtec_ctx_feat[:, i, :] = trans.scale_wtec(wtec_ctx_feat[:, i, :],
+                                                          tid_type=tid_type)[0]
+            wtec_ctx_feat = torch.tensor(wtec_ctx_feat, dtype=torch.float).flatten(1, 2)
+        else:
+            wtec_ctx_feat = torch.zeros((n_batch, 0), dtype=torch.float)
+
         # z scale inputs and place into tensors
-        driver_feat = trans.scale_driver(drivers, driver_names=driver_names)
+        driver_feat = trans.scale_driver(drivers, driver_names=driver_names, data_type='wtec')
         driver_feat = torch.tensor(driver_feat, dtype=torch.float)
+        driver_feat = torch.cat((driver_feat, wtec_ctx_feat), dim=-1)
 
         if torch.cuda.is_available() and cuda_index is not None:
             device = torch.device('cuda:' + str(cuda_index))
-            if len(drivers) >= 500:
-                batch_size = 500
-            else:
-                batch_size = len(drivers)
+            if batch_size is None:
+                if len(drivers) >= 500:
+                    batch_size = 500
+                else:
+                    batch_size = len(drivers)
         else:
             device = torch.device('cpu')
-            if len(drivers) >= 100:
-                batch_size = 100
-            else:
-                batch_size = len(drivers)
+            if batch_size is None:
+                if len(drivers) >= 100:
+                    batch_size = 100
+                else:
+                    batch_size = len(drivers)
 
         batch_idxs = np.hstack((np.arange(0, len(drivers), step=batch_size), [len(drivers)]))
+        wtec_feats = torch.zeros((len(driver_feat), const.n_wtec))
         if mean_replace_drs is not None and len(mean_replace_drs) > 0:
             replace_dr_idxs = np.hstack([const.dr_feat_map[n] for n in mean_replace_drs])
         else:
@@ -89,25 +136,26 @@ def generate_wtec(drivers,
 
         # Load bv models
         if model_dir is None:
-            wtec_gen, _ = persist.recreate(name=wtec_model)
+            wtec_gen, _ = persist.recreate(name=model_name)
         else:
-            wtec_gen, _ = persist.recreate(name=wtec_model, dir_path=model_dir)
+            wtec_gen, _ = persist.recreate(name=model_name, dir_path=model_dir)
 
         if wtec_gen.cond_dim != driver_feat.shape[-1]:
             raise ValueError(f"Model must be trained with "
                              f"{driver_feat.shape[-1]} drivers.")
         wtec_gen.to(device)
-        wtec_feats = torch.zeros((len(driver_feat), const.n_wtec_feat), device=device)
         wtec_gen.eval()
 
         # iteratively build altitude profile
-        for i in tqdm(range(len(batch_idxs) - 1), desc='Generating TEC Waves', disable=disable1):
+        for i in tqdm(range(len(batch_idxs) - 1),
+                      desc=f'Generating {tid_type}_{location} Waves',
+                      disable=disable1):
             dr_src = driver_feat[batch_idxs[i]:batch_idxs[i + 1]].to(device)
             dr_src[..., replace_dr_idxs] = 0.0
-            wtec_feats[batch_idxs[i]:batch_idxs[i + 1], :] = wtec_gen(dr_src)
+            wtec_feats[batch_idxs[i]:batch_idxs[i + 1], :] = wtec_gen(dr_src).detach().cpu()
 
-        G_wtec_feats = wtec_feats.detach().cpu().numpy()
-        G_wtecs = trans.get_wtec(wtec_feats.detach().cpu().numpy(), dataset_name=dataset_name)
+        G_wtec_feats = wtec_feats.numpy()
+        G_wtecs = trans.get_wtec(wtec_feats.numpy(), tid_type=tid_type)
         wtec_gen.cpu()
 
         if return_z_scale:
@@ -117,11 +165,15 @@ def generate_wtec(drivers,
 
 
 def generate_multi_wtec(drivers: np.ndarray,
+                        ctx_wtecs: Union[np.ndarray, None] = None,
                         n_repeat: int = 10,
-                        wtec_model: str = const.wtec_default_model,
+                        tid_type: str = const.wtec_default_tid_type,
+                        location: str = const.wtec_default_location,
+                        model_name: Union[None, str] = None,
                         model_dir: Union[None, str] = None,
-                        dataset_name=const.wtec_default_dataset,
                         cuda_index: Union[None, int] = None,
+                        block_size: int = 40000,
+                        batch_size: int = 5000,
                         verbose: int = 0):
     """
     Generate multiple background variable profiles and HFP waves
@@ -131,14 +183,23 @@ def generate_multi_wtec(drivers: np.ndarray,
     -------------
     drivers: np.ndarray
         n_samples x n_drivers input list of driving parameters (not z-scaled).
+    ctx_wtecs: np.ndarray. optional
+        the wtec context samples to use when conditioning the GAN
     n_repeat: int, optional
         number of waves to generate for each driver sample
-    wtec_model: str, optional
+    tid_type: str
+        specify dataset type for z-scaling
+    location: str
+        specify the location of the trained model
+    model_name: str, optional
         name of WTEC GAN to use
     model_dir: str, optional
         directory to load model from
-    dataset_name: str
-        specify dataset type for z-scaling
+    block_size: int, optional
+        first batch process size
+    batch_size: int, optional
+        second batch processing size
+        (split twice block and batch to limit memory usage)
     cuda_index: int, optional
         GPU index
     verbose: bool, optional
@@ -151,15 +212,23 @@ def generate_multi_wtec(drivers: np.ndarray,
     disable = bool(verbose < 1)
     G_wtec = np.zeros((len(drivers), n_repeat, const.n_wtec))
 
-    for i in tqdm(range(len(drivers)), desc='Generating Samples', disable=disable):
-        sampled_driver = drivers[[i], ...].repeat(n_repeat, 0)
-        G_wtec[i, ...] = generate_wtec(sampled_driver,
-                                       driver_names=const.wtec_dr_names,
-                                       dataset_name=dataset_name,
-                                       wtec_model=wtec_model,
-                                       model_dir=model_dir,
-                                       cuda_index=cuda_index,
-                                       verbose=False)
+    block_idxs = np.hstack((np.arange(0, len(drivers), step=block_size // n_repeat), [len(drivers)]))
+    for i in tqdm(range(len(block_idxs) - 1), desc=f'Sampling {tid_type}_{location} Waves', disable=disable):
+        sampled_driver = drivers[block_idxs[i]:block_idxs[i + 1], ...].repeat(n_repeat, 0)
+        if ctx_wtecs is not None:
+            sampled_wtec_context = ctx_wtecs[block_idxs[i]:block_idxs[i + 1], ...].repeat(n_repeat, 0)
+        else:
+            sampled_wtec_context = None
+        G_wtec[block_idxs[i]:block_idxs[i + 1], ...] = generate_wtec(sampled_driver,
+                                                                     driver_names=const.wtec_dr_names,
+                                                                     tid_type=tid_type,
+                                                                     location=location,
+                                                                     model_name=model_name,
+                                                                     ctx_wtecs=sampled_wtec_context,
+                                                                     model_dir=model_dir,
+                                                                     cuda_index=cuda_index,
+                                                                     batch_size=batch_size,
+                                                                     verbose=False).reshape((-1, n_repeat, const.n_wtec))
     return G_wtec
 
 
@@ -634,294 +703,9 @@ def estimate_drivers(drivers, model='dr_gan'):
     return predicted_drivers
 
 
-def hellinger_scores_bv(real: np.ndarray,
-                        fake: np.ndarray,
-                        mask: Union[None, np.ndarray]=None,
-                        bins: Union[None, int]=None,
-                        filter_length: Union[None, int]=None,
-                        return_hist_info: bool=False,
-                        z_scale: bool=True,
-                        z_scale_input: bool=False,
-                        bv_type: str='radar'):
-    """
-    Returns the hellinger distance score that measures how similarity between
-    real and generated background variable profiles.
-
-    Parameters
-    ----------------
-    real: np.ndarray
-        tensor of real values for a particular alt and bv feat
-    fake: np.ndarray
-        tensor of generated values for a particular alt and bv feat
-    bins: int
-        number of bins to use in histogram calculations
-        (If None # of bins will be calculated based on number of samples)
-    filter_length: int
-        averaging filter length to smooth out noise in histograms
-        (If None filter length will be calculated based on number of samples)
-    return_hist_info: bool
-        set to have function return the histograms and bin edges used which
-        were used to calculate the hellinger distance metric.
-    z_scale: bool
-        used z-scaled values when calculating hellinger distance (recommended)
-    z_scale_input: bool
-        Set if you are inputting bvs that are
-        already z-scaled
-    bv_type:
-        type of data (radar or lidar)
-    Returns
-    -------------
-    dist:
-        the hellinger distance (n_alts x n_feats)
-    hist_info
-        additional histogram data that was used to calculate hellinger dist.
-        Info includes to real and fake histograms and there shared bin edges.
-    """
-    if mask is None:
-        mask = np.ones((real.shape[0], real.shape[1]), dtype=bool)
-
-    if bins is None:
-        bins = max(15, int((real.shape[0])**const.bin_exp))
-    if filter_length is None:
-        filter_length = max(2, int(len(real)**const.filter_exp))
-
-    dists = np.zeros((real.shape[1], real.shape[2]))
-    r_hists = np.zeros((bins, real.shape[1], real.shape[2]))
-    f_hists = np.zeros((bins, real.shape[1], real.shape[2]))
-    edges = np.zeros((bins + 1, real.shape[1], real.shape[2]))
-
-    for i in range(real.shape[1]):
-        for j in range(real.shape[2]):
-            if z_scale:
-                if z_scale_input:
-                    r = real[mask[:, i], i, j]
-                    f = fake[mask[:, i], i, j]
-                else:
-                    r = trans.scale_bv(real, bv_type)[0][mask[:, i], i, j]
-                    f = trans.scale_bv(fake, bv_type)[0][mask[:, i], i, j]
-                binranges = (max(const.bv_z_ranges[j][0], min(np.nanmin(r), np.nanmin(f))),
-                             min(const.bv_z_ranges[j][1], max(np.nanmax(r), np.nanmax(f))))
-                args = {'bins': bins, 'range': binranges, 'density': True}
-            else:
-                if z_scale_input:
-                    r = trans.get_bv(real, bv_type)[mask[:, i], i, j]
-                    f = trans.get_bv(fake, bv_type)[mask[:, i], i, j]
-                else:
-                    r = real[mask[:, i], i, j]
-                    f = fake[mask[:, i], i, j]
-                binranges = (max(const.bv_thresholds[j, 0], min(np.nanmin(r), np.nanmin(f))),
-                             min(const.bv_thresholds[j, 1], max(np.nanmax(r), np.nanmax(f))))
-                args = {'bins': bins, 'range': binranges, 'density': True}
-            r_hist, edg = np.histogram(r, **args)
-            f_hist, edg = np.histogram(f, **args)
-            if filter_length:
-                r_hist = np.convolve(r_hist, np.ones(filter_length), mode='same') / filter_length
-                f_hist = np.convolve(f_hist, np.ones(filter_length), mode='same') / filter_length
-            r_area = r_hist * np.diff(edg)
-            f_area = f_hist * np.diff(edg)
-            dists[i, j] = (1 / np.sqrt(2)) * np.sqrt(np.sum((np.sqrt(r_area) - np.sqrt(f_area)) ** 2))
-            r_hists[:, i, j] = r_hist
-            f_hists[:, i, j] = f_hist
-            edges[:, i, j] = edg
-
-    if return_hist_info:
-        return dists, (r_hists, f_hists, edges)
-    else:
-        return dists
-
-
-def hellinger_scores_hfp(real: np.ndarray,
-                         fake: np.ndarray,
-                         r_mask: Union[None, np.ndarray] = None,
-                         f_mask: Union[None, np.ndarray] = None,
-                         n_bins: Union[None, tuple, int] = None,
-                         filter_length: Union[None, int] = None,
-                         return_hist_info: bool = False,
-                         z_scale: bool = True,
-                         z_scale_input: bool = False,):
-    """
-    Returns the hellinger distance score that measures the similarity between
-    real and generated background variable profiles.
-
-    Parameters
-    ----------------
-    real:
-        tensor of real values for a particular alt and bv feat
-    fake:
-        tensor of generated values for a particular alt and bv feat
-    n_bins:
-        tensor of real values for a particular alt and bv feat
-    filter_length:
-        averaging filter length to smooth out histograms
-    z_scale: bool
-        used z-scaled values (recommended)
-    z_scale_input: bool
-        Set if you are inputting hfps that are
-        already z-scaled
-    return_hist_info: bool
-        set to have function return the real hist,
-        fake hist, and bin edges used in calculation
-    Returns
-    -------------
-    dist:
-        the hellinger distance (n_alts or n_waves x n_feats)
-    hist_info:
-        additional histogram data that was used to calculate hellinger dist.
-        Info includes to real and fake histograms and there shared bin edges.
-    """
-    if r_mask is None:
-        r_mask = np.ones((real.shape[0], real.shape[1]), dtype=bool)
-    if f_mask is None:
-        f_mask = np.ones((fake.shape[0], fake.shape[1]), dtype=bool)
-
-    if n_bins is None:
-        n_bins = max(15, int(r_mask.sum() ** const.bin_exp))
-    if filter_length is None:
-        filter_length = max(2, int(r_mask.sum() ** const.filter_exp))
-
-    dists = np.zeros((real.shape[1], real.shape[2]))
-    r_hists = np.zeros((n_bins, real.shape[1], real.shape[2]))
-    f_hists = np.zeros((n_bins, real.shape[1], real.shape[2]))
-    edges = np.zeros((n_bins + 1, real.shape[1], real.shape[2]))
-
-    for i in range(real.shape[1]):
-        for j in range(real.shape[2]):
-            if z_scale:
-                if z_scale_input:
-                    r = real[r_mask[:, i], i, j]
-                    f = fake[f_mask[:, i], i, j]
-                else:
-                    r = trans.scale_hfp(real)[0][r_mask[:, i], i, j]
-                    f = trans.scale_hfp(fake)[0][f_mask[:, i], i, j]
-                binranges = (max(const.hfp_z_ranges[j][0], min(np.nanmin(r), np.nanmin(f))),
-                             min(const.hfp_z_ranges[j][1], max(np.nanmax(r), np.nanmax(f))))
-                args = {'bins': n_bins, 'range': binranges, 'density': True}
-            else:
-                if z_scale_input:
-                    r = trans.get_hfp(real)[r_mask[:, i], i, j]
-                    f = trans.get_hfp(fake)[f_mask[:, i], i, j]
-                else:
-                    r = real[r_mask[:, i], i, j]
-                    f = fake[f_mask[:, i], i, j]
-                binranges = (max(const.hfp_meas_ranges[j][0], min(np.nanmin(r), np.nanmin(f))),
-                             min(const.hfp_meas_ranges[j][1], max(np.nanmax(r), np.nanmax(f))))
-                args = {'bins': n_bins, 'range': binranges, 'density': True}
-            r_hist, edg = np.histogram(r, **args)
-            f_hist, edg = np.histogram(f, **args)
-            if filter_length:
-                r_hist = np.convolve(r_hist, np.ones(filter_length), mode='same') / filter_length
-                f_hist = np.convolve(f_hist, np.ones(filter_length), mode='same') / filter_length
-            r_area = r_hist * np.diff(edg)
-            f_area = f_hist * np.diff(edg)
-            dists[i, j] = (1 / np.sqrt(2)) * np.sqrt(np.sum((np.sqrt(r_area) -
-                                                             np.sqrt(f_area)) ** 2))
-            r_hists[:, i, j] = r_hist
-            f_hists[:, i, j] = f_hist
-            edges[:, i, j] = edg
-
-    if return_hist_info:
-        return dists, (r_hists, f_hists, edges)
-    else:
-        return dists
-
-
-def hellinger_scores_wtec(real: np.ndarray,
-                          fake: np.ndarray,
-                          n_bins: Union[None, int] = None,
-                          filter_length: Union[None, int] = None,
-                          z_scale: bool = True,
-                          z_scale_inputs: bool = False,
-                          dataset_name: Union[None, str] = const.wtec_default_dataset,
-                          return_hist_info: bool = False,):
-    """
-    Returns the hellinger distance score that measures the similarity between
-    real and generated tec wave.
-
-    Parameters
-    ----------------
-    real:
-        array of real tec waves
-    fake:
-        array of fake/generated tec waves
-    n_bins:
-        number of bins to use during hellinger score calculation
-    filter_length:
-        averaging filter length to smooth out histograms
-    z_scale: bool
-        used z-scaled values (recommended)
-    z_scale_inputs: bool
-        Set if you are inputting hfps that are
-        already z-scaled
-    dataset_name: str
-        specify dataset type for z-scaling
-    return_hist_info: bool
-        set to have function return the real hist,
-        fake hist, and bin edges used in calculation
-    Returns
-    -------------
-    dist:
-        the hellinger distance (1 x n_feats)
-    hist_info:
-        additional histogram data that was used to calculate hellinger dist.
-        Info includes to real and fake histograms and there shared bin edges.
-    """
-
-    if n_bins is None:
-        n_bins = max(15, int(len(real) ** const.bin_exp))
-    if filter_length is None:
-        filter_length = max(2, int(len(real) ** const.filter_exp))
-
-    dists = np.zeros(real.shape[1])
-    r_hists = np.zeros((n_bins, real.shape[1]))
-    f_hists = np.zeros((n_bins, real.shape[1]))
-    edges = np.zeros((n_bins + 1, real.shape[1]))
-
-    for i in range(real.shape[1]):
-        if z_scale:
-            if z_scale_inputs:
-                r = real[:, i]
-                f = fake[:, i]
-            else:
-                r = trans.scale_wtec(real, dataset_name=dataset_name)[0][:, i]
-                f = trans.scale_wtec(fake, dataset_name=dataset_name)[0][:, i]
-            binranges = (max(const.wtec_zscale_dict[dataset_name]['z_ranges'][i][0], min(np.nanmin(r), np.nanmin(f))),
-                         min(const.wtec_zscale_dict[dataset_name]['z_ranges'][i][1], max(np.nanmax(r), np.nanmax(f))))
-            args = {'bins': n_bins, 'range': binranges, 'density': True}
-        else:
-            if z_scale_inputs:
-                r = trans.get_wtec(real, dataset_name=dataset_name)[:, i]
-                f = trans.get_wtec(fake, dataset_name=dataset_name)[:, i]
-            else:
-                r = real[:, i]
-                f = fake[:, i]
-            binranges = (max(const.wtec_zscale_dict[dataset_name]['meas_ranges'][i][0], min(np.nanmin(r), np.nanmin(f))),
-                         min(const.wtec_zscale_dict[dataset_name]['meas_ranges'][i][1], max(np.nanmax(r), np.nanmax(f))))
-            args = {'bins': n_bins, 'range': binranges, 'density': True}
-        r_hist, edg = np.histogram(r, **args)
-        f_hist, edg = np.histogram(f, **args)
-        if filter_length:
-            r_hist = np.convolve(r_hist, np.ones(filter_length), mode='same') / filter_length
-            f_hist = np.convolve(f_hist, np.ones(filter_length), mode='same') / filter_length
-        r_area = r_hist * np.diff(edg)
-        f_area = f_hist * np.diff(edg)
-        dists[i] = (1 / np.sqrt(2)) * np.sqrt(np.sum((np.sqrt(r_area) -
-                                                      np.sqrt(f_area)) ** 2))
-        r_hists[:, i] = r_hist
-        f_hists[:, i] = f_hist
-        edges[:, i] = edg
-
-    if return_hist_info:
-        return dists, (r_hists, f_hists, edges)
-    else:
-        return dists
-
-
 def stack_drivers(driver_dict, driver_names=const.driver_names):
     """
-    Stacks drivers in appropriate format.
-
-    This function is provided for convenience.
-
+    Stacks drivers in appropriate format. This function is provided for convenience.
 
     Parameters
     ----------------
@@ -963,9 +747,7 @@ def stack_drivers(driver_dict, driver_names=const.driver_names):
 
 def stack_bvs(bv_dict, bv_type='radar'):
     """
-    Stacks drivers in appropriate format.
-
-    This function is provided for convenience.
+    Stacks drivers in appropriate format. This function is provided for convenience.
 
     Parameters
     ----------------
@@ -1128,11 +910,15 @@ def load_h5_data(fname,
         return drivers, bvs, alt_mask, unix_time
 
 
-def load_wtec_h5(fname: str,
-                 dataset_name=const.wtec_default_dataset,
+def load_wtec_h5(fname: Union[None, str] = None,
+                 locations: Union[list, str] = const.wtec_default_location,
+                 tid_type: str = const.wtec_default_tid_type,
+                 split: Union[None, str] = None,
                  n_samples: Union[None, int] = None,
-                 avg_coefficients: Union[None, List[float]] = None,
-                 random_start: bool = True,):
+                 n_context: int = 0,
+                 context_padding: int = 1,
+                 start_utc: Union[str, float, None] = None,
+                 **kwargs):
     """
     loads and returns external drivers, tec wave parameters,
     and unix timestamp all aligned in time with outlier/invalid
@@ -1141,76 +927,136 @@ def load_wtec_h5(fname: str,
     Parameters
     -------------
     fname: str
-        name of h5 file to load the data from
-    dataset_name: str
+        name of h5 file to load the data from. None will load tutorial subset
+    tid_type: str
         specify dataset type for z-scaling
+    locations: str
+        site locations to load
+    split: str. optional
+        name of the dataset split to load ('train' or 'val' or None for all)
+    n_context: int. optional
+        the number of previous samples to load for each sample
+        to be used as temporal context when conditioning the model
+    context_padding: int. optional
+        the number of previous samples to load for each sample
+        to pad with
     n_samples: int. optional
         number of samples to load (None to load all samples)
-    avg_coefficients: list (n_wtec_feat,)
-        z-scaled averaging coefficients to smooth out
-        the original tec wave parameter distributions.
-    random_start: bool. optional
-        randomize starting index to select n_samples from
+    start_utc: bool. optional
+        utc timestamp of the first sample to load. set to 'random'
+        to get random start.
     Returns
     -------------
-    drivers: np.ndarray
-        (n_samples x n_wtec_dr) external drivers.
-    wtec: np.ndarray
-        (n_samples x n_wtec) tec wave parameter samples.
-    unix_time: np.ndarray
-        (n_samples, ) time stamp of each sample
+    data: dict
+        dict of wtec data and metadata for each location. Each location includes:
+            - "drivers": (n_samples x n_wtec_dr) external drivers.
+            - "wtecs": (n_samples x n_wtec) tec wave parameter samples.
+            - "ctx_wtecs": (n_samples x n_context, n_wtec) context tec wave parameter samples.
+            - "wtecs": (n_samples, ) time stamp of each sample
+            - "location": (str) location name
+            - "tid_type": (str) data TID type
+            - "dataset_name": (str) location name + TID type
     """
-    with h5py.File(fname, 'r') as f:
-        # --------------------------------------
-        # Read driver and time stamps from file
-        # --------------------------------------
-        dr_dict = f['Drivers']
-        unix_time = f['UnixTime'][()]
-        drivers = np.stack([dr_dict[driver_name][:]
-                            for driver_name in const.driver_names
-                            if driver_name in dr_dict.keys()],
-                           axis=-1)
-        # --------------------------------------
-        # Read tec wave parameters form h5 file
-        # --------------------------------------
-        wtec_dict = f['TEC_Waves']
-        wtec = np.stack([wtec_dict[wtec_name]
-                         for wtec_name in const.wtec_names
-                         if wtec_name in wtec_dict.keys()], axis=-1)
+    if isinstance(locations, str):
+        locations = [locations]
 
-    # Get valid bvs and altitude mask
-    valid_wtec_mask = compute_valid_wtec(wtec)
-    valid_mask = valid_wtec_mask & ~(np.isnan(drivers).any(-1))
+    if tid_type not in const.wtec_dict.keys():
+        raise ValueError(f'{tid_type} is an invalid TID Type. Plz choose from the following:'
+                         f' {list(const.wtec_dict.keys())}')
+    for loc in locations:
+        if loc not in const.wtec_sites.keys():
+            raise ValueError(f'{loc} is unsupported. Plz choose from the following:'
+                             f' {list(const.wtec_sites.keys())}')
 
-    # Filter out any invalid samples
-    drivers = drivers[valid_mask]
-    wtec = wtec[valid_mask]
-    unix_time = unix_time[valid_mask]
+    if fname is None:
+        tutorial_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..', 'tutorials')
+        if os.path.exists(f'wtec_tutorial.h5'):
+            fname = f'wtec_tutorial.h5'
+        elif os.path.exists(os.path.join(tutorial_dir, f'wtec_tutorial.h5')):
+            fname = os.path.join(tutorial_dir, f'wtec_tutorial.h5')
+        else:
+            raise ValueError(f"Unable to find default data file")
+    elif not os.path.exists(fname):
+        raise ValueError(f"Unable to find data file: {fname}")
 
-    if n_samples is None or n_samples > valid_mask.sum():
-        n_samples = valid_mask.sum()
-    if random_start and n_samples and len(drivers) - n_samples > 0:
-        start_index = np.random.randint(low=0, high=len(drivers) - n_samples)
+    with h5py.File(fname, 'r') as hf:
+        data = {loc: {} for loc in locations if tid_type in hf[loc].keys()}
+        for loc in locations:
+            if tid_type in hf[loc].keys():
+                if split in ["train", "val"]:
+                    split_indexes = hf[loc][tid_type][f"{split}_indexes"][:]
+                else:
+                    split_indexes = np.arange(len(hf[loc][tid_type]['UnixTime']))
+
+                global_indexes = hf[loc][tid_type]["global_indexes"][:]
+                dr_global = np.stack([hf['Global_Drivers'][name] for name in
+                                      const.wtec_dr_names if name in
+                                      hf['Global_Drivers'].keys()], axis=-1)[global_indexes]
+                dr_global_names = [name for name in const.wtec_dr_names if name in hf['Global_Drivers'].keys()]
+                dr_global = {name: dr_global[:, i] for i, name in enumerate(dr_global_names)}
+                dr_all = {}
+                for name in const.wtec_dr_names:
+                    if name in dr_global.keys():
+                        dr_all[name] = dr_global[name]
+                    elif name in hf[loc][tid_type]["Drivers"]:
+                        dr_all[name] = hf[loc][tid_type]["Drivers"][name]
+
+                drs = np.stack([dr_all[n] for n in const.wtec_dr_names], axis=-1)[split_indexes]
+                wtecs = np.stack([hf[loc][tid_type]["TEC_Waves"][name]
+                                  for name in const.wtec_names if name in
+                                  hf[loc][tid_type]["TEC_Waves"].keys()], axis=-1)[split_indexes]
+                utc = hf[loc][tid_type]["UnixTime"][split_indexes]
+
+                # Scale drivers and get valid  mask
+                valid_mask = ~(np.isnan(drs).any(-1)) & trans.scale_wtec(wtecs, tid_type=tid_type)[1]
+                if n_context > 0:
+                    ctx_mapping, ctx_mask = context_mapping(utc[valid_mask],
+                                                            n_context=n_context,
+                                                            n_padding=context_padding)
+                    data[loc]["drivers"] = drs[valid_mask & ctx_mask]
+                    data[loc]["wtecs"] = wtecs[valid_mask & ctx_mask]
+                    data[loc]["ctx_wtecs"] = wtecs[valid_mask][ctx_mapping]
+                    data[loc]["utc"] = utc[valid_mask & ctx_mask]
+                else:
+                    data[loc]["drivers"] = drs[valid_mask]
+                    data[loc]["wtecs"] = wtecs[valid_mask]
+                    data[loc]["ctx_wtecs"] = np.zeros((wtecs[valid_mask].shape[0], 0, wtecs[valid_mask].shape[1]))
+                    data[loc]["utc"] = utc[valid_mask]
+
+                data[loc]["location"] = loc
+                data[loc]["tid_type"] = tid_type
+                data[loc]["dataset_name"] = f'{tid_type}_{loc}'
+    hf.close()
+
+    if start_utc == 'random':
+        if n_samples is None:
+            max_utc = np.min([data[loc]["utc"].max() for loc in locations])
+        else:
+            max_utc = np.min([data[loc]["utc"][-min(len(data[loc]["utc"]), n_samples):] for loc in locations])
+        min_utc = np.max([data[loc]["utc"].min() for loc in locations])
+        rand_start = np.random.uniform(low=min_utc, high=max_utc)
+        start_indexes = [np.argmin(abs(rand_start - data[loc]['utc'])) for loc in locations]
+    elif isinstance(start_utc, float):
+        start_indexes = [np.argmin(abs(start_utc - data[loc]['utc'])) for loc in locations]
     else:
-        start_index = 0
-    drivers = drivers[start_index:start_index+n_samples]
-    wtec = wtec[start_index:start_index+n_samples]
-    unix_time = unix_time[start_index:start_index+n_samples]
+        start_indexes = [0 for loc in locations]
 
-    # Perform averaging on tec wave data
-    if avg_coefficients is not None:
-        wtec = average_wtec(wtec,
-                            dataset_name=dataset_name,
-                            avg_coefficients=avg_coefficients,
-                            z_scale_input=False)
-
-    return drivers, wtec, unix_time
+    for start, loc in zip(start_indexes, locations):
+        if n_samples is None:
+            end = len(data[loc]['utc'])
+        else:
+            end = min(start + n_samples, len(data[loc]['utc']))
+        data[loc]["drivers"] = data[loc]["drivers"][start:end]
+        data[loc]["wtecs"] = data[loc]["wtecs"][start:end]
+        data[loc]["ctx_wtecs"] = data[loc]["ctx_wtecs"][start:end]
+        data[loc]["utc"] = data[loc]["utc"][start:end]
+    return data
 
 
 def average_wtec(wtec: np.ndarray,
-                 avg_coefficients: List[float] = const.wtec_avg_coefficients,
-                 z_scale_input: bool = False,
-                 dataset_name: Union[None, str] = const.wtec_default_dataset):
+                 avg_coefficients: Union[np.ndarray, list, None] = None,
+                 tid_type: Union[None, str] = const.wtec_default_tid_type,
+                 z_scale_input: bool = False,):
     """
     loads and returns external drivers, tec wave parameters,
     and unix timestamp all aligned in time with outlier/invalid
@@ -1223,22 +1069,30 @@ def average_wtec(wtec: np.ndarray,
     avg_coefficients: list (n_wtec_feat,)
         z-scaled averaging coefficients to smooth out
         the original tec wave parameter distributions.
+    tid_type: str
+        specify dataset type for z-scaling
     z_scale_input: bool
         set if the input wtec data is already z-scaled
-    dataset_name: str
-        specify dataset type for z-scaling
     Returns
     -------------
     wtec: np.ndarray
         (n_samples x n_wtec) tec wave parameter samples.
     """
     n, n_feat = wtec.shape[0], wtec.shape[1]
+    if avg_coefficients is None:
+        if tid_type is None:
+            raise ValueError('Must enter either averaging coefficients or dataset name')
+        elif tid_type not in const.wtec_dict.keys():
+            raise ValueError(f'{tid_type} is invalid. Must be on of the following: '
+                             f'{list(const.wtec_dict.keys())}')
+        avg_coefficients = const.wtec_dict[tid_type]['avg_coefficients']
+
     if z_scale_input:
         averaged_wtec = wtec + np.random.randn(n, n_feat) * avg_coefficients
     else:
         averaged_wtec = wtec.copy()
-        wtec_feat, valid_mask = trans.scale_wtec(wtec, dataset_name=dataset_name)
-        averaged_wtec[valid_mask] = wtec_feat + np.random.randn(n, n_feat) * avg_coefficients
-        averaged_wtec = trans.get_wtec(averaged_wtec, dataset_name=dataset_name)
+        wtec_feat, _ = trans.scale_wtec(wtec, tid_type=tid_type)
+        averaged_wtec = wtec_feat + np.random.randn(n, n_feat) * avg_coefficients
+        averaged_wtec = trans.get_wtec(averaged_wtec, tid_type=tid_type)
 
     return averaged_wtec

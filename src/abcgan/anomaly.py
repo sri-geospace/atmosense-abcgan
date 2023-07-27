@@ -5,7 +5,7 @@ from numpy import linalg as LA
 import abcgan.constants as const
 
 
-def marginal_anomaly_estimation(sampled_feats, feats, alpha=2.0):
+def marginal_anomaly_estimation(sampled_feats: np.ndarray, feats: np.ndarray, alpha: float = 2.0):
     """
         compute an anomaly scores from the set of generated features
         using marginal distribution based logsumexp computation
@@ -33,7 +33,7 @@ def marginal_anomaly_estimation(sampled_feats, feats, alpha=2.0):
     return anomalies
 
 
-def joint_anomaly_estimation(sampled_feats, feats, alpha=1.0):
+def joint_anomaly_estimation(sampled_feats: np.ndarray, feats: np.ndarray, alpha: float = 1.0):
     """
         compute an anomaly scores from the set of generated features
         using joint distribution based logsumexp computation
@@ -61,7 +61,7 @@ def joint_anomaly_estimation(sampled_feats, feats, alpha=1.0):
     return anomalies
 
 
-def anomaly_score_bv(bvs, gen_bvs, method: str= 'joint', alpha: float = 2.0):
+def anomaly_score_bv(bvs, gen_bvs, method: str = 'joint', alpha: float = 2.0):
     """
     returns unbounded anomaly scores for a background profiles
     given set of generated samples. Low scores represent anomalous events.
@@ -92,14 +92,14 @@ def anomaly_score_bv(bvs, gen_bvs, method: str= 'joint', alpha: float = 2.0):
     else:
         raise ValueError(f"{method} is an invalid method."
                          f" Pleas use 'marginal' or 'joint' method")
-
+    n_alts = bvs.shape[-2]
     for i in range(len(bvs)):
         if bvs.shape[-1] == const.n_bv_feat:
-            G_feats = trans.scale_bv(gen_bvs[i, ...])[0]
-            real_feat = trans.scale_bv(bvs[[i], ...])[0]
+            G_feats = trans.scale_bv(gen_bvs[i, ...])[0][:, :n_alts]
+            real_feat = trans.scale_bv(bvs[[i], ...])[0][:, :n_alts]
         elif bvs.shape[-1] == const.n_lidar_bv_feat:
-            G_feats = trans.scale_bv(gen_bvs[i, ...], bv_type='lidar')[0]
-            real_feat = trans.scale_bv(bvs[[i], ...], bv_type='lidar')[0]
+            G_feats = trans.scale_bv(gen_bvs[i, ...], bv_type='lidar')[0][:, :n_alts]
+            real_feat = trans.scale_bv(bvs[[i], ...], bv_type='lidar')[0][:, :n_alts]
         else:
             raise ValueError(f"{bvs.shape[-1]} is an invalid number of input features. "
                              f"Must input {const.n_bv} for Radar BVs or "
@@ -112,7 +112,7 @@ def anomaly_score_bv(bvs, gen_bvs, method: str= 'joint', alpha: float = 2.0):
     return anomalies
 
 
-def anomaly_score_hfp(hfps, gen_hfps, method: str= 'joint', alpha: float = 2.0):
+def anomaly_score_hfp(hfps: np.ndarray, gen_hfps: np.ndarray, method: str = 'joint', alpha: float = 2.0):
     """
     returns unbounded anomaly scores for a HFP waves
     given set of generated samples. Low scores represent anomalous events.
@@ -159,11 +159,11 @@ def anomaly_score_hfp(hfps, gen_hfps, method: str= 'joint', alpha: float = 2.0):
     return anomalies
 
 
-def anomaly_score_wtec(wtecs,
+def anomaly_score_wtec(wtecs: np.ndarray,
                        gen_wtecs: np.ndarray,
                        method: str = 'joint',
                        alpha: float = 2.0,
-                       dataset_name=const.wtec_default_dataset):
+                       tid_type: str = const.wtec_default_tid_type):
     """
     returns unbounded anomaly scores for TEC wave parameters
     given set of generated TEC waves. Low scores represent anomalous events.
@@ -180,7 +180,7 @@ def anomaly_score_wtec(wtecs,
         'joint': estimates anomaly score of each tec wave using joint distribution
     alpha: float
         scalar parameter for sigma (lower alpha --> finner resolution)
-    dataset_name: str
+    tid_type: str
         specify dataset type for z-scaling
     Returns
     -------------
@@ -199,8 +199,8 @@ def anomaly_score_wtec(wtecs,
 
     for i in range(len(wtecs)):
         if wtecs.shape[-1] == const.n_wtec:
-            G_feats = trans.scale_wtec(gen_wtecs[i, ...], dataset_name=dataset_name)[0]
-            real_feat = trans.scale_wtec(wtecs[[i], ...], dataset_name=dataset_name)[0]
+            G_feats = trans.scale_wtec(gen_wtecs[i, ...], tid_type=tid_type)[0]
+            real_feat = trans.scale_wtec(wtecs[[i], ...], tid_type=tid_type)[0]
         else:
             raise ValueError(f"{wtecs.shape[-1]} is an invalid number of input features. "
                              f"Must input {const.n_wtec} for TEC Waves ")

@@ -1,4 +1,7 @@
 import torch
+import numpy as np
+from typing import List
+
 import abcgan.constants as const
 import abcgan.transforms as trans
 from abcgan import persist
@@ -72,8 +75,11 @@ def get_decoder_attn(transformer, tgt, memory, key_padding_mask):
     return attn_map
 
 
-def collect_hfp_attn_map(drivers, bvs, driver_names=const.driver_names,
-                         model='hfp_gan', bv_type='radar'):
+def collect_hfp_attn_map(drivers: np.ndarray,
+                         bvs: np.ndarray,
+                         driver_names: List[str] = const.driver_names,
+                         model: str = 'hfp_gan',
+                         bv_type: str = 'radar'):
     """
     function to collect attention map from the HFP GAN's decoder
 
@@ -122,16 +128,18 @@ def collect_hfp_attn_map(drivers, bvs, driver_names=const.driver_names,
         src = (driver_feat.unsqueeze(0) @ transformer.dr_emb + bv_shift + transformer.bv_position.unsqueeze(1))
         tgt = (driver_feat.unsqueeze(0) @ transformer.dr_emb + transformer.hfp_start_token.unsqueeze(1))
         memory = transformer.encoder(src, mask=transformer.src_mask,
-                                     src_key_padding_mask=src_key_mask)
-
-        attn_map = get_decoder_attn(transformer, tgt, memory, src_key_mask)
+                                     src_key_padding_mask=src_key_mask.to(transformer.src_mask.dtype))
+        attn_map = get_decoder_attn(transformer, tgt, memory, src_key_mask.to(transformer.src_mask.dtype))
 
     attn_map = torch.mean(attn_map, dim=0).detach().numpy()
     return attn_map
 
 
-def collect_bv_attn_map(drivers, bvs, driver_names=const.driver_names,
-                        model='bv_gan', bv_type='radar'):
+def collect_bv_attn_map(drivers: np.ndarray,
+                        bvs: np.ndarray,
+                        driver_names: List[str] = const.driver_names,
+                        model: str = 'bv_gan',
+                        bv_type: str = 'radar'):
     """
     function to collect attention map from weights in pre-trained model
 
@@ -182,7 +190,7 @@ def collect_bv_attn_map(drivers, bvs, driver_names=const.driver_names,
 
         attn_output_weights = get_encoder_attn(encoder.layers, src,
                                                transformer.src_mask,
-                                               src_key_mask)
+                                               src_key_mask.to(transformer.src_mask.dtype))
 
     attn_map = torch.mean(attn_output_weights, dim=0)
     return attn_map.detach().numpy()
