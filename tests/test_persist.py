@@ -80,7 +80,7 @@ def get_test_hfp_modules(gen, crit):
 def get_tec_test_modules(gen, crit):
     n_batch = 10
     driver_src = torch.zeros(n_batch, const.n_wtec_dr_feat)
-    tec_src = torch.zeros(n_batch, const.n_wtec_feat)
+    tec_src = torch.zeros(n_batch, const.n_wtec)
 
     gen_output = gen(driver_src)
     gen_valid = not gen_output.isnan().any().item()
@@ -143,14 +143,13 @@ class Persist(unittest.TestCase):
         self.assertTrue(os.path.exists(info_file))
 
     def test_wtec_recreate(self):
-        if not os.path.exists(param_file):
-            gen_in, crit_in = wtec_modules()
-            persist.persist(gen_in, crit_in, fname, dir_path)
-        gen, crit = persist.recreate(fname, dir_path)
-        # test that loaded modules are working
-        gen_valid, crit_valid = get_tec_test_modules(gen, crit)
-        self.assertTrue(gen_valid)
-        self.assertTrue(crit_valid)
+        for ds in const.wtec_dataset_names:
+            wtec_model = f'wtec_gan_{ds}'
+            gen, crit = persist.recreate(wtec_model)
+            # test that loaded modules are working
+            gen_valid, crit_valid = get_tec_test_modules(gen, crit)
+            self.assertTrue(gen_valid)
+            self.assertTrue(crit_valid)
 
 
 if __name__ == "__main__":

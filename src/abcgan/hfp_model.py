@@ -309,11 +309,12 @@ class HFP_Transformer(nn.Module):
         hfp_shift[0, :, :] = self.hfp_start_token.unsqueeze(1)
         tgt = (driver_src.unsqueeze(0) @ self.dr_emb + hfp_shift)
 
+        key_mask = src_key_padding_mask.to(self.src_mask.dtype) if src_key_padding_mask is not None else None
         encoder_output = self.encoder(src, mask=self.src_mask,
-                                      src_key_padding_mask=src_key_padding_mask)
+                                      src_key_padding_mask=key_mask)
         decoder_output = self.decoder(tgt, encoder_output,
                                       tgt_mask=self.tgt_mask,
-                                      memory_key_padding_mask=src_key_padding_mask)
+                                      memory_key_padding_mask=key_mask)
 
         if self.output_b:
             decoder_output = (decoder_output @ self.b_emb)
