@@ -7,26 +7,29 @@ from torch import Tensor
 
 
 class Transformer(nn.Module):
-    """Transformer with only the encoder
-    Parameters:
-        d_dr: int
-            number of expected drivers features to condition with
-        d_bv: int
-            the number of expected bv features to input/output
-        n_alt: int
-            the number of bv altitude bins
-        d_model: int
-            the number of expected features in the encoder/decoder inputs
-        nhead: int
-            the number of heads in the multiheadattention models
-        num_encoder_layers: int
-            the number of sub-encoder-layers in the encoder
-        dim_feedforward: int
-            the dimension of the feedforward network model
-        dropout: float
-            the dropout value
-        activation: str
-            the activation function of encoder/decoder intermediate layer
+    """
+    Transformer with only the encoder
+
+    Parameters
+    -----------
+    d_dr: int
+        number of expected drivers features to condition with
+    d_bv: int
+        the number of expected bv features to input/output
+    n_alt: int
+        the number of bv altitude bins
+    d_model: int
+        the number of expected features in the encoder/decoder inputs
+    nhead: int
+        the number of heads in the multiheadattention models
+    num_encoder_layers: int
+        the number of sub-encoder-layers in the encoder
+    dim_feedforward: int
+        the dimension of the feedforward network model
+    dropout: float
+        the dropout value
+    activation: str
+        the activation function of encoder/decoder intermediate layer
     """
 
     def __init__(self,
