@@ -13,15 +13,23 @@
 #   2022-04-22  Todd Valentic
 #               Fix repo url 
 #
+#   2023-07-29  Todd Valentic
+#               Add support for downloading models and data from LFS
+#
 ##########################################################################
 
 import sys
 import io 
 import fnmatch
+import os
 import pathlib
 import argparse
-import requests 
+import shutil
 import tarfile
+
+from abcgan import persist
+import requests
+from tqdm import tqdm
 
 #-------------------------------------------------------------------------
 # Command Processors 
@@ -45,6 +53,64 @@ def filter_members(tar, match_path='*', strip_components=None):
 
             yield member
 
+def download_file(url, filename, timeout=None):
+
+        filename.parent.mkdir(parents=True, exist_ok=True)
+
+        with requests.get(url, stream=True, timeout=timeout) as r:
+            r.raise_for_status()
+            file_size = int(r.headers.get('Content-Length', 0))
+
+            desc = "(Unknown file size)" if file_size == 0 else ""
+           
+            with tqdm.wrapattr(r.raw, "read", total=file_size, desc=desc) as r_raw:
+                with filename.open('wb') as f:
+                    shutil.copyfileobj(r_raw, f)
+
+def download_files(args, url, srcpath, destpath):
+
+    lfs_signature = "version https://git-lfs.github.com/spec/v1"
+
+    for root, dirs, files in os.walk(srcpath):   
+        for name in files:
+            filename = pathlib.Path(root, name)
+            destname = destpath / name 
+            with filename.open('r', encoding='utf-8') as f:
+                try:
+                    line = f.readline()
+                except UnicodeDecodeError:
+                    continue
+
+            if lfs_signature not in line:
+                continue
+
+            kw = {'repo': args.repo, 'root': root, 'name':name}
+            url = url.format(**kw)
+            log(args, f"Download {url} -> {destname}") 
+            download_file(url, destname)
+
+def download_model_files(args):
+    """Download model files from the LFS tracking files"""
+
+    log(args, f"Downloading model files")
+
+    dstpath = pathlib.Path('tutorials', 'models')
+    url = 'https://github.com/{repo}/raw/main/src/abcgan/models/{name}'
+
+    download_files(args, url, persist.dir_path, dstpath)
+
+def download_data_files(args):
+    """Download data files from the LFS tracking files"""
+
+    log(args, f"Downloading data files")
+
+    srcpath = 'tutorials' 
+    dstpath = pathlib.Path('tutorials')
+    url = 'https://github.com/{repo}/raw/main/{root}/{name}'
+
+    download_files(args, url, srcpath, dstpath)
+
+
 def ProcessDownload(args): 
 
     log(args, f'Downloading files from repo {args.repo}')
@@ -62,6 +128,10 @@ def ProcessDownload(args):
     with tarfile.open(fileobj=byte_stream) as tar:
         members = filter_members(tar, match_path=match, strip_components=1)
         tar.extractall(members=members)
+
+    if args.asset == 'tutorials' and args.models:
+        download_model_files(args)
+        download_data_files(args)
 
     log(args, 'Finished')
 
@@ -96,6 +166,11 @@ if __name__ == '__main__':
     parser.add_argument('-q','--quiet',dest='quiet',
                         action='store_true',
                         help='Do not display output messages')
+
+    parser.add_argument('-m','--models',dest='models',
+                        action='store_true',
+                        help='Download models and data for tutorials')
+
 
     #-- Process -----------------------------------------------------------
 

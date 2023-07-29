@@ -20,4 +20,4 @@
 - Added new TEC GAN locations
 - Added regional and context models
 - Update tutorials
-
+- Update abcgan-cmd to download data and models
