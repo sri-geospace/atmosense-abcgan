@@ -33,8 +33,11 @@ After downloading the tutorials, install the required packages listed
 in tutorials/requirements.txt using pip.  You can then start Jupyter Lab
 and load the tutorial notebook tutorial/demo.ipynb.
 
+The data files and models used in the tutorials are approximately 600Mb
+in size. Use the -m flag to abcgan-cmd to download them with the tutorials.
+
 ```cmd
-abcgan-cmd download tutorials
+abcgan-cmd -m download tutorials
 pip install -r tutorials/requirements.txt
 
 jupyter lab 
