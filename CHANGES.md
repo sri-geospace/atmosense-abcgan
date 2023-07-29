@@ -15,3 +15,9 @@
 - Add TEC GAN and models
 - Update tutorials
 
+## 4.0.0
+- Updated TEC GAN and models and datasets
+- Added new TEC GAN locations
+- Added regional and context models
+- Update tutorials
+- Update abcgan-cmd to download data and models

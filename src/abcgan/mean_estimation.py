@@ -7,15 +7,29 @@ from torch import Tensor
 
 
 class Transformer(nn.Module):
-    """Transformer with only the encoder
-    Parameters:
-        d_model: the number of expected features in the encoder/decoder inputs
-        d_stack: the number of features to stack to output
-        nhead: the number of heads in the multiheadattention models
-        num_encoder_layers: the number of sub-encoder-layers in the encoder
-        dim_feedforward: the dimension of the feedforward network model
-        dropout: the dropout value
-        activation: the activation function of encoder/decoder intermediate layer
+    """
+    Transformer with only the encoder
+
+    Parameters
+    -----------
+    d_dr: int
+        number of expected drivers features to condition with
+    d_bv: int
+        the number of expected bv features to input/output
+    n_alt: int
+        the number of bv altitude bins
+    d_model: int
+        the number of expected features in the encoder/decoder inputs
+    nhead: int
+        the number of heads in the multiheadattention models
+    num_encoder_layers: int
+        the number of sub-encoder-layers in the encoder
+    dim_feedforward: int
+        the dimension of the feedforward network model
+    dropout: float
+        the dropout value
+    activation: str
+        the activation function of encoder/decoder intermediate layer
     """
 
     def __init__(self,
@@ -23,8 +37,10 @@ class Transformer(nn.Module):
                  d_bv: int = const.n_bv_feat,
                  n_alt: int = const.max_alt,
                  d_model: int = 64,
-                 nhead: int = 1, num_encoder_layers: int = 1,
-                 dim_feedforward: int = 64, dropout: float = 0.0,
+                 nhead: int = 1,
+                 num_encoder_layers: int = 1,
+                 dim_feedforward: int = 64,
+                 dropout: float = 0.0,
                  activation: str = "relu") -> None:
         super().__init__()
         # args captured for persistence
@@ -82,8 +98,9 @@ class Transformer(nn.Module):
         bv_shift[0, :, :] = self.start_token.unsqueeze(1)
         src = (driver_src.unsqueeze(0) @ self.dr_emb + bv_shift +
                self.position.unsqueeze(1))
+        key_mask = src_key_padding_mask.to(self.src_mask.dtype) if src_key_padding_mask is not None else None
         encoder_output = self.encoder(src, mask=self.src_mask,
-                                      src_key_padding_mask=src_key_padding_mask)
+                                      src_key_padding_mask=key_mask)
         est_bv = encoder_output.transpose(0, 1)
         est_bv[src_key_padding_mask] = 0.0
         return est_bv
